@@ -75,22 +75,45 @@ def _ad_summary(ad: AdExtraction, name_variants: list[str]) -> dict:
 
 
 _COUNT = re.compile(r"\b\d+\s*(?:x\s*\d+\s*)?(?:pcs|pc|pieces|capsules|caps|tablets|tabs|softgels|sachets|strips)\b")
+_PACK_AMOUNT = re.compile(r"\b\d+(?:\.\d+)?\s*(?:kg|gm|g|grams?|ml|l|ltr|litre|liter)\b")  # 120g, 225 ml = pack size
 _FORM_WORDS = re.compile(r"\b(?:capsules?|caps|tablets?|tabs|softgels?|syrup|powder|sachets?|pot|jar|bottle|box|pack)\b")
-_UNIT = re.compile(r"(\d)\s*(?:mg|mcg|µg|gm|g|ml|iu)\b")
+_UNIT = re.compile(r"(\d)\s*(?:mg|mcg|µg|iu)\b")  # 500 mg = strength, kept as the number
 _LEGAL = re.compile(r"\b(?:ltd|limited|pvt|private|plc|inc|llc|co|company|corp|corporation|bd|bangladesh)\b")
+_BENGALI = re.compile(r"[ঀ-৿]")
+_LATIN = re.compile(r"[A-Za-z]")
+# Words shops add around a product name that do not make it a different product.
+_GENERIC = {"natural", "herbal", "organic", "original", "ayurvedic", "unani", "supplement", "food", "product",
+            "research", "weight", "gain", "loss", "for", "and", "the", "of", "with", "bd", "bangladesh", "imported"}
+
+
+def script_of(text: str | None) -> str | None:
+    """'bn' or 'latin' (whichever letters dominate), None for empty/other."""
+    if not text:
+        return None
+    bn, la = len(_BENGALI.findall(text)), len(_LATIN.findall(text))
+    if not bn and not la:
+        return None
+    return "bn" if bn > la else "latin"
 
 
 def core_product_name(name: str) -> str:
-    """Product name without pack size and dosage-form words: 'Dibedex 500 mg (30 Pcs)' -> 'dibedex 500'.
+    """Product name without pack size, form words or a marketing tail:
+    'Dibedex 500 mg (30 Pcs)' -> 'dibedex 500'; 'Healthy Plus Milk Supplement 120g' -> 'healthy plus milk supplement'.
 
-    The strength number (500) is kept, because a different strength is a different product.
+    The strength number (500 mg) is kept, because a different strength is a different product.
     """
-    t = to_ascii_digits(name or "").lower()
-    t = re.sub(r"\([^)]*\)", " ", t)  # (30 Pcs), (Ayurvedic) ...
-    t = _COUNT.sub(" ", t)  # 60pcs, 30 capsules, 3x10 tablets
-    t = _UNIT.sub(r"\1", t)  # 500 mg -> 500
+    t = (name or "").lower()
+    # a dash/bar with a space next to it, or a dash where Latin text switches to Bangla, starts a tail
+    parts = re.split(r"\s[-–—|:]\s?|[-–—|]\s|\s[-–—|]|(?<=[a-z0-9])[-–—](?=[\u0980-\u09FF])", t)
+    if len(parts) > 1 and len(parts[0].split()) >= 2:
+        t = parts[0]  # 'Healthy Plus Milk Supplement-১মাসে ৮-১০কেজি ...' -> before the tail
+    t = to_ascii_digits(t)
+    t = re.sub(r"\([^)]*\)?", " ", t)  # (30 Pcs), (Ayurvedic), unclosed '( Weight Gain'
+    t = _COUNT.sub(" ", t)
+    t = _PACK_AMOUNT.sub(" ", t)
+    t = _UNIT.sub(r"\1", t)
     t = _FORM_WORDS.sub(" ", t)
-    t = re.sub(r"[^\w\s.]+", " ", t)
+    t = re.sub(r"[^\w\s.\u0980-\u09FF]+", " ", t)
     return re.sub(r"\s+", " ", t).strip()
 
 
@@ -100,20 +123,43 @@ def _core_company(name: str) -> str:
     return re.sub(r"\s+", " ", t).strip()
 
 
+def _comparable(a: str | None, b: str | None) -> bool:
+    """Both present and in the same script. 'Hamdard' vs 'হামদর্দ' cannot be compared by spelling."""
+    return bool(a and b) and script_of(a) == script_of(b)
+
+
 def same_product(name_a: str, name_b: str, *, brand_a: str | None = None, brand_b: str | None = None,
                  maker_a: str | None = None, maker_b: str | None = None) -> bool:
-    """Do two page descriptions name the same product? Pack-size variants (30 vs 60 pcs) and form words
-    count as the same; an extra word ('Plus'), a different strength, brand or manufacturer does not."""
+    """Do two page descriptions name the same product?
+
+    Same: pack-size variants (30 vs 60 pcs, 120 g), form words, a company-name prefix ('Index Dibedex 500'),
+    generic shop words ('Weight gain ... milk supplement'). Different: another strength, a distinguishing
+    extra word ('Plus', 'Silver'), or a clearly different brand or manufacturer.
+    """
+    company_words = set()
+    for m in (maker_a, maker_b):
+        if m and script_of(m) == "latin":
+            company_words |= set(_core_company(m).split()) - {"laboratories", "laboratory", "pharma", "pharmaceuticals"}
     ca, cb = core_product_name(name_a) or name_a.lower(), core_product_name(name_b) or name_b.lower()
     na, nb = set(re.findall(r"\d+(?:\.\d+)?", ca)), set(re.findall(r"\d+(?:\.\d+)?", cb))
     if na and nb and na != nb:
         return False
-    wa, wb = re.sub(r"[\d.]+", " ", ca).split(), re.sub(r"[\d.]+", " ", cb).split()
+    wa = [w for w in re.sub(r"[\d.]+", " ", ca).split() if w not in company_words]
+    wb = [w for w in re.sub(r"[\d.]+", " ", cb).split() if w not in company_words]
+    if not wa or not wb:
+        return False
     if fuzz.token_sort_ratio(" ".join(wa), " ".join(wb)) < NAME_MATCH * 100:
-        return False
-    if brand_a and brand_b and similarity(brand_a, brand_b) < 0.8:
-        return False
-    if maker_a and maker_b:
+        # Allow one name to contain the other when the extra words are only generic shop words.
+        sa, sb = set(wa), set(wb)
+        small, big = (sa, sb) if len(sa) <= len(sb) else (sb, sa)
+        if not (small <= big and (big - small) <= _GENERIC and small - _GENERIC):
+            return False
+    if _comparable(brand_a, brand_b) and similarity(brand_a, brand_b) < 0.8:
+        # A brand can be the company ('Index') on one page and the product line ('Dibedex') on another.
+        other = " ".join(x for x in (name_a, name_b, maker_a, maker_b) if x).lower()
+        if brand_a.lower() not in other.replace(brand_a.lower(), "", 1) and brand_b.lower() not in other.replace(brand_b.lower(), "", 1):
+            return False
+    if _comparable(maker_a, maker_b):
         ma, mb = _core_company(maker_a), _core_company(maker_b)
         if ma and mb and similarity(ma, mb) < 0.8:
             return False
@@ -313,8 +359,10 @@ class ProductPhase:
         ad = self.ad
         name = max((max(similarity(v, c.name), similarity(core_product_name(v) or v, core_product_name(c.name) or c.name))
                     for v in self.name_variants), default=0.0)
-        brand = similarity(ad.brand.value, c.brand or c.name) if ad.brand else None
-        man = similarity(ad.manufacturer.name.value, c.manufacturer) if (ad.manufacturer.name and c.manufacturer) else None
+        brand = (similarity(ad.brand.value, c.brand or c.name)
+                 if ad.brand and _comparable(ad.brand.value, c.brand or c.name) else None)
+        man = (similarity(ad.manufacturer.name.value, c.manufacturer)
+               if ad.manufacturer.name and _comparable(ad.manufacturer.name.value, c.manufacturer) else None)
         ing = None
         if ad.ingredients:
             names = [self.s.findings[f].value for sid in c.source_ids for f in self.s.pages[sid].ingredient_finding_ids]
