@@ -11,6 +11,7 @@ from app.jobs.stages import ANALYZE_STAGES, RESEARCH_STAGES, empty_stages, set_s
 from app.models.advertisement import Advertisement
 from app.models.extraction import ExtractedClaim, ExtractedProduct, MentionedIngredient
 from app.models.media import ExtractedFrame, OcrResult, SpeechTranscript, UploadedFile
+from app.models.pipeline_v2 import AdExtractionRecord, ResearchDossierRecord
 from app.models.research import (
     DiseaseRiskResearch,
     EvidencePassage,
@@ -26,7 +27,11 @@ from app.models.research import (
 )
 from app.schemas.dossier import ResearchDossier
 from app.services.extraction.banglabert import extract_with_optional_banglabert
+from app.config import get_settings
+from app.schemas.research.ad_extraction import AdExtraction
+from app.services.ocr.document import build_ocr_document
 from app.services.ocr.pipeline import run_ocr_on_image
+from app.services.pipeline_v2 import extract_ad, to_legacy_dossier
 from app.services.research.fallback import run_scripted_research
 from app.services.speech import transcribe_audio, transcription_status
 from app.services.storage import storage
@@ -205,6 +210,17 @@ def run_analyze_job(job_id: str) -> None:
         extracted = extract_with_optional_banglabert(
             ocr_text="\n".join(ocr_bits), speech_text="\n".join(speech_bits)
         )
+        ad_extraction, extraction_note = _extract_v2(db, ad, extracted)
+        if ad_extraction.extractor.name == "grounded_llm":
+            _store_v2_extraction_rows(db, ad, ad_extraction)
+            db.commit()
+            stages = set_stage(job.stages, "information_extraction_completed", "completed",
+                               f"grounded LLM extractor: {len(ad_extraction.claims)} claims, "
+                               f"{len(ad_extraction.ingredients)} ingredients")
+            ad.status = "analyzed"
+            db.add(ad)
+            _save_job(db, job, status="completed", current_stage="information_extraction_completed", stages=stages)
+            return
         db.add(
             ExtractedProduct(
                 advertisement_id=ad.id,
@@ -237,7 +253,7 @@ def run_analyze_job(job_id: str) -> None:
                 )
             )
         db.commit()
-        stages = set_stage(job.stages, "information_extraction_completed", "completed")
+        stages = set_stage(job.stages, "information_extraction_completed", "completed", extraction_note)
         ad.status = "analyzed"
         db.add(ad)
         _save_job(db, job, status="completed", current_stage="information_extraction_completed", stages=stages)
@@ -441,7 +457,12 @@ def run_research_job(job_id: str) -> None:
         }
 
         try:
-            if llm_configured():
+            if get_settings().research_agent == "v2":
+                dossier = _run_research_v2(db, ad)
+                stages = set_stage(job.stages, "product_identification_started", "completed",
+                                   "research agent v2 (product intelligence); see dossier-v2")
+                _save_job(db, job, stages=stages)
+            elif llm_configured():
                 dossier = run_research_agent(brief)
             else:
                 dossier = run_scripted_research(brief)
@@ -465,3 +486,73 @@ def run_research_job(job_id: str) -> None:
             _save_job(db, job, status="failed", error_message=str(exc), stages=stages)
     finally:
         db.close()
+
+
+# ---- v2 pipeline helpers -------------------------------------------------------------
+
+def _ocr_document(db: Session, ad: Advertisement):
+    frames = {f.id: f.timestamp_ms for f in db.query(ExtractedFrame).filter_by(advertisement_id=ad.id).all()}
+    return build_ocr_document(
+        ad_id=ad.id,
+        media_type=ad.media_type,
+        ocr_rows=db.query(OcrResult).filter_by(advertisement_id=ad.id).all(),
+        frames=frames,
+        transcripts=db.query(SpeechTranscript).filter_by(advertisement_id=ad.id).all(),
+        preferred_provider=_preferred_ocr_provider(db, ad.id),
+    )
+
+
+def _extract_v2(db: Session, ad: Advertisement, baseline_result):
+    doc = _ocr_document(db, ad)
+    extraction, note = extract_ad(doc, baseline_result)
+    db.add(AdExtractionRecord(advertisement_id=ad.id, extractor=extraction.extractor.name,
+                              schema_version=extraction.schema_version, payload=extraction.model_dump(mode="json")))
+    db.commit()
+    return extraction, note
+
+
+def _store_v2_extraction_rows(db: Session, ad: Advertisement, ex: AdExtraction) -> None:
+    """Fill the existing tables from the grounded extraction so the current report shows it."""
+    db.add(
+        ExtractedProduct(
+            advertisement_id=ad.id,
+            product_name=ex.product_name.value if ex.product_name else None,
+            brand=ex.brand.value if ex.brand else None,
+            manufacturer=ex.manufacturer.name.value if ex.manufacturer.name else None,
+            product_category=None,
+            source="combined",
+            original_span=ex.product_name.span.text if ex.product_name else None,
+            extra={"backend": ex.extractor.name, "version": ex.extractor.version, "model": ex.extractor.model,
+                   "rejected": len(ex.rejected)},
+        )
+    )
+    for c in ex.claims:
+        db.add(ExtractedClaim(advertisement_id=ad.id, claim_text_original=c.text_original, claim_text_en=c.text_en,
+                              claim_type=c.claim_type.value, source="ocr",
+                              extra={"claim_id": c.claim_id, "qualifiers": c.qualifiers, "target": c.target,
+                                     "evidence": c.span.text}))
+    for i in ex.ingredients:
+        db.add(MentionedIngredient(advertisement_id=ad.id, name=i.name_en or i.name_original,
+                                   original_text=i.name_original + (f" ({i.amount})" if i.amount else ""), source="ocr"))
+
+
+def latest_ad_extraction(db: Session, ad_id: str) -> AdExtraction | None:
+    row = (db.query(AdExtractionRecord).filter_by(advertisement_id=ad_id)
+           .order_by(AdExtractionRecord.created_at.desc()).first())
+    return AdExtraction.model_validate(row.payload) if row else None
+
+
+def _run_research_v2(db: Session, ad: Advertisement) -> ResearchDossier:
+    from app.services.research_agent.runner import run_research
+
+    extraction = latest_ad_extraction(db, ad.id)
+    if extraction is None:  # analysed before v2 existed: rebuild from stored OCR with the configured extractor
+        from app.services.extraction.baseline import extract_from_text
+
+        doc = _ocr_document(db, ad)
+        extraction, _ = extract_ad(doc, extract_from_text(ocr_text=doc.full_text))
+    dossier_v2 = run_research(extraction)
+    db.add(ResearchDossierRecord(advertisement_id=ad.id, dossier_id=dossier_v2.dossier_id,
+                                 schema_version=dossier_v2.schema_version, payload=dossier_v2.model_dump(mode="json")))
+    db.commit()
+    return to_legacy_dossier(dossier_v2)
