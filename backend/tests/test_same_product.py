@@ -29,3 +29,16 @@ def test_real_differences_keep_products_apart():
     assert not same_product("Centrum Silver", "Centrum Men")
     assert not same_product("Healthy Plus Milk Supplement", "Milk Supplement( Weight Gain)")
     assert not same_product("Super Slimming Herb", "Slimming Tea")
+
+
+def test_name_coverage_needs_every_distinctive_ad_word():
+    from app.services.research_agent.product_phase import name_coverage
+
+    # Wrong product picked in the third live run: 'treatment' is missing.
+    assert name_coverage("Complete Hair Treatment Pack", "MAYA Ready to Use Complete Care Hair Pack") < 0.7
+    assert name_coverage("Saduri", "Saduri Syrup 225 ml (Research Product)") == 1.0
+    assert name_coverage("Dibedex", "Dibedex 500") == 1.0
+    assert name_coverage("Healthy Plus", "Milk Supplement( Weight Gain)") == 0.0
+    assert name_coverage("Healthy Plus", "Healthy Plus Milk Supplement") >= 0.85
+    assert 0.7 <= name_coverage("Saduri", "Saduri Plus") < 1.0
+    assert name_coverage("ডায়বিডেক্স", "Dibedex 500") is None
