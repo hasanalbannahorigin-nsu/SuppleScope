@@ -9,6 +9,9 @@ from __future__ import annotations
 
 import json
 import logging
+import re
+
+from rapidfuzz import fuzz
 from dataclasses import dataclass
 
 from app.schemas.research.ad_extraction import AdExtraction
@@ -39,7 +42,7 @@ from app.services.research_agent import prompts as P
 from app.services.research_agent.budget import BudgetExhausted
 from app.services.research_agent.state import NEVER_OFFICIAL, SOURCE_RANK, ReadPage, ResearchState, domain
 from app.services.research_agent.validate import quote_in_source, value_in_passage
-from app.services.text.bangla import similarity
+from app.services.text.bangla import similarity, to_ascii_digits
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +72,52 @@ def _ad_summary(ad: AdExtraction, name_variants: list[str]) -> dict:
         "claims_en": [c.text_en or c.text_original for c in ad.claims][:8],
         "other_text": [o.value for o in ad.other_text][:8],
     }
+
+
+_COUNT = re.compile(r"\b\d+\s*(?:x\s*\d+\s*)?(?:pcs|pc|pieces|capsules|caps|tablets|tabs|softgels|sachets|strips)\b")
+_FORM_WORDS = re.compile(r"\b(?:capsules?|caps|tablets?|tabs|softgels?|syrup|powder|sachets?|pot|jar|bottle|box|pack)\b")
+_UNIT = re.compile(r"(\d)\s*(?:mg|mcg|µg|gm|g|ml|iu)\b")
+_LEGAL = re.compile(r"\b(?:ltd|limited|pvt|private|plc|inc|llc|co|company|corp|corporation|bd|bangladesh)\b")
+
+
+def core_product_name(name: str) -> str:
+    """Product name without pack size and dosage-form words: 'Dibedex 500 mg (30 Pcs)' -> 'dibedex 500'.
+
+    The strength number (500) is kept, because a different strength is a different product.
+    """
+    t = to_ascii_digits(name or "").lower()
+    t = re.sub(r"\([^)]*\)", " ", t)  # (30 Pcs), (Ayurvedic) ...
+    t = _COUNT.sub(" ", t)  # 60pcs, 30 capsules, 3x10 tablets
+    t = _UNIT.sub(r"\1", t)  # 500 mg -> 500
+    t = _FORM_WORDS.sub(" ", t)
+    t = re.sub(r"[^\w\s.]+", " ", t)
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def _core_company(name: str) -> str:
+    t = re.sub(r"\([^)]*\)", " ", (name or "").lower())
+    t = _LEGAL.sub(" ", re.sub(r"[^\w\s]+", " ", t))
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def same_product(name_a: str, name_b: str, *, brand_a: str | None = None, brand_b: str | None = None,
+                 maker_a: str | None = None, maker_b: str | None = None) -> bool:
+    """Do two page descriptions name the same product? Pack-size variants (30 vs 60 pcs) and form words
+    count as the same; an extra word ('Plus'), a different strength, brand or manufacturer does not."""
+    ca, cb = core_product_name(name_a) or name_a.lower(), core_product_name(name_b) or name_b.lower()
+    na, nb = set(re.findall(r"\d+(?:\.\d+)?", ca)), set(re.findall(r"\d+(?:\.\d+)?", cb))
+    if na and nb and na != nb:
+        return False
+    wa, wb = re.sub(r"[\d.]+", " ", ca).split(), re.sub(r"[\d.]+", " ", cb).split()
+    if fuzz.token_sort_ratio(" ".join(wa), " ".join(wb)) < NAME_MATCH * 100:
+        return False
+    if brand_a and brand_b and similarity(brand_a, brand_b) < 0.8:
+        return False
+    if maker_a and maker_b:
+        ma, mb = _core_company(maker_a), _core_company(maker_b)
+        if ma and mb and similarity(ma, mb) < 0.8:
+            return False
+    return True
 
 
 @dataclass
@@ -246,9 +295,8 @@ class ProductPhase:
             brand = page.about.get("brand")
             match = None
             for c in self.candidates:
-                same_name = similarity(c.name, name) >= NAME_MATCH
-                brand_ok = not (c.brand and brand) or similarity(c.brand, brand) >= 0.8
-                if same_name and brand_ok:
+                if same_product(c.name, name, brand_a=c.brand, brand_b=brand,
+                                maker_a=c.manufacturer, maker_b=page.about.get("manufacturer")):
                     match = c
                     break
             if match is None:
@@ -263,7 +311,8 @@ class ProductPhase:
 
     def _scores(self, c: _Cand) -> MatchScores:
         ad = self.ad
-        name = max((similarity(v, c.name) for v in self.name_variants), default=0.0)
+        name = max((max(similarity(v, c.name), similarity(core_product_name(v) or v, core_product_name(c.name) or c.name))
+                    for v in self.name_variants), default=0.0)
         brand = similarity(ad.brand.value, c.brand or c.name) if ad.brand else None
         man = similarity(ad.manufacturer.name.value, c.manufacturer) if (ad.manufacturer.name and c.manufacturer) else None
         ing = None
