@@ -1,0 +1,2787 @@
+{
+  "$defs": {
+    "AdClaim": {
+      "additionalProperties": false,
+      "properties": {
+        "claim_id": {
+          "description": "e.g. 'c01'; stable across the pipeline",
+          "title": "Claim Id",
+          "type": "string"
+        },
+        "text_original": {
+          "description": "One atomic claim (one effect on one target), ad wording",
+          "title": "Text Original",
+          "type": "string"
+        },
+        "text_en": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "English translation for search; not used as evidence",
+          "title": "Text En"
+        },
+        "claim_type": {
+          "$ref": "#/$defs/ClaimType"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Condition or body function, e.g. 'ডায়াবেটিস'",
+          "title": "Target"
+        },
+        "target_en": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target En"
+        },
+        "qualifiers": {
+          "description": "Time frames, magnitudes, absolutes: '৭ দিনে', 'চিরতরে', '১০০%'",
+          "items": {
+            "type": "string"
+          },
+          "title": "Qualifiers",
+          "type": "array"
+        },
+        "negated": {
+          "default": false,
+          "title": "Negated",
+          "type": "boolean"
+        },
+        "span": {
+          "$ref": "#/$defs/TextSpan"
+        }
+      },
+      "required": [
+        "claim_id",
+        "text_original",
+        "claim_type",
+        "span"
+      ],
+      "title": "AdClaim",
+      "type": "object"
+    },
+    "AdExtraction": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "default": "2.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "ad_id": {
+          "title": "Ad Id",
+          "type": "string"
+        },
+        "extractor": {
+          "$ref": "#/$defs/ExtractorInfo"
+        },
+        "product_name": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AdField"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "brand": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AdField"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "manufacturer": {
+          "$ref": "#/$defs/AdManufacturer"
+        },
+        "ingredients": {
+          "items": {
+            "$ref": "#/$defs/AdIngredient"
+          },
+          "title": "Ingredients",
+          "type": "array"
+        },
+        "claims": {
+          "items": {
+            "$ref": "#/$defs/AdClaim"
+          },
+          "title": "Claims",
+          "type": "array"
+        },
+        "usage": {
+          "items": {
+            "$ref": "#/$defs/AdUsage"
+          },
+          "title": "Usage",
+          "type": "array"
+        },
+        "warnings": {
+          "items": {
+            "$ref": "#/$defs/AdField"
+          },
+          "title": "Warnings",
+          "type": "array"
+        },
+        "other_text": {
+          "description": "Prices, phone/order lines, slogans, certifications as printed",
+          "items": {
+            "$ref": "#/$defs/AdField"
+          },
+          "title": "Other Text",
+          "type": "array"
+        },
+        "unreadable": {
+          "description": "Fragments too garbled to interpret",
+          "items": {
+            "type": "string"
+          },
+          "title": "Unreadable",
+          "type": "array"
+        },
+        "rejected": {
+          "description": "Items dropped because their span was not found in the ad text",
+          "items": {
+            "$ref": "#/$defs/RejectedItem"
+          },
+          "title": "Rejected",
+          "type": "array"
+        }
+      },
+      "required": [
+        "ad_id",
+        "extractor"
+      ],
+      "title": "AdExtraction",
+      "type": "object"
+    },
+    "AdField": {
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "description": "As written in the ad (original script)",
+          "title": "Value",
+          "type": "string"
+        },
+        "span": {
+          "$ref": "#/$defs/TextSpan"
+        }
+      },
+      "required": [
+        "value",
+        "span"
+      ],
+      "title": "AdField",
+      "type": "object"
+    },
+    "AdIngredient": {
+      "additionalProperties": false,
+      "properties": {
+        "mention_id": {
+          "description": "e.g. 'ing_m01'",
+          "title": "Mention Id",
+          "type": "string"
+        },
+        "name_original": {
+          "description": "As written in the ad",
+          "title": "Name Original",
+          "type": "string"
+        },
+        "name_en": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "English rendering of the name for searching; a translation, not new information",
+          "title": "Name En"
+        },
+        "amount": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Only if shown in the ad, e.g. '৬০০ মি.গ্রা.'",
+          "title": "Amount"
+        },
+        "span": {
+          "$ref": "#/$defs/TextSpan"
+        }
+      },
+      "required": [
+        "mention_id",
+        "name_original",
+        "span"
+      ],
+      "title": "AdIngredient",
+      "type": "object"
+    },
+    "AdManufacturer": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AdField"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "address": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AdField"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "phone": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AdField"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "website": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AdField"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "AdManufacturer",
+      "type": "object"
+    },
+    "AdUsage": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "dose_amount": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dose Amount"
+        },
+        "dose_unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dose Unit"
+        },
+        "times_per_day": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Times Per Day"
+        },
+        "timing": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timing"
+        },
+        "duration": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration"
+        },
+        "population": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Population"
+        },
+        "span": {
+          "$ref": "#/$defs/TextSpan"
+        }
+      },
+      "required": [
+        "text",
+        "span"
+      ],
+      "title": "AdUsage",
+      "type": "object"
+    },
+    "AgentInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "agent_version": {
+          "title": "Agent Version",
+          "type": "string"
+        },
+        "llm_provider": {
+          "title": "Llm Provider",
+          "type": "string"
+        },
+        "llm_model": {
+          "title": "Llm Model",
+          "type": "string"
+        },
+        "search_provider": {
+          "description": "'duckduckgo', 'tavily', ... (configurable)",
+          "title": "Search Provider",
+          "type": "string"
+        },
+        "literature_providers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Literature Providers",
+          "type": "array"
+        }
+      },
+      "required": [
+        "agent_version",
+        "llm_provider",
+        "llm_model",
+        "search_provider"
+      ],
+      "title": "AgentInfo",
+      "type": "object"
+    },
+    "BrandManufacturer": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/ResearchStatus"
+        },
+        "brand_finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Brand Finding Ids",
+          "type": "array"
+        },
+        "manufacturer_finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Manufacturer Finding Ids",
+          "type": "array"
+        },
+        "official_website": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Official Website"
+        },
+        "official_website_source_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Official Website Source Id"
+        },
+        "country": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Country"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "BrandManufacturer",
+      "type": "object"
+    },
+    "ClaimEvidenceLink": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_id": {
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "scope": {
+          "$ref": "#/$defs/EvidenceScope",
+          "description": "INGREDIENT or FINISHED_PRODUCT; copied from the EvidenceRecord"
+        },
+        "ingredient_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Set when scope is INGREDIENT",
+          "title": "Ingredient Id"
+        },
+        "relation": {
+          "$ref": "#/$defs/EvidenceRelation"
+        },
+        "match": {
+          "$ref": "#/$defs/ClaimEvidenceMatch"
+        },
+        "relevant_passage": {
+          "description": "The part of the evidence passage that bears on this claim",
+          "title": "Relevant Passage",
+          "type": "string"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "scope",
+        "relation",
+        "match",
+        "relevant_passage"
+      ],
+      "title": "ClaimEvidenceLink",
+      "type": "object"
+    },
+    "ClaimEvidenceMatch": {
+      "additionalProperties": false,
+      "description": "How closely a study matches what the ad actually says.",
+      "properties": {
+        "outcome": {
+          "$ref": "#/$defs/MatchLevel",
+          "description": "Study outcome vs the claimed effect"
+        },
+        "population": {
+          "$ref": "#/$defs/MatchLevel",
+          "description": "Study population vs the ad's audience"
+        },
+        "dose": {
+          "$ref": "#/$defs/MatchLevel",
+          "description": "Tested dose vs the product's dose (if known)"
+        },
+        "intervention": {
+          "$ref": "#/$defs/MatchLevel",
+          "description": "Same finished product, same ingredient form, or different"
+        },
+        "qualifiers": {
+          "$ref": "#/$defs/MatchLevel",
+          "description": "Magnitude / time frame / absoluteness ('in 7 days', 'permanently')"
+        },
+        "human_evidence": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Human Evidence"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes"
+        }
+      },
+      "required": [
+        "outcome",
+        "population",
+        "dose",
+        "intervention",
+        "qualifiers"
+      ],
+      "title": "ClaimEvidenceMatch",
+      "type": "object"
+    },
+    "ClaimResearch": {
+      "additionalProperties": false,
+      "properties": {
+        "claim_id": {
+          "description": "AdClaim.claim_id",
+          "title": "Claim Id",
+          "type": "string"
+        },
+        "claim_text_original": {
+          "title": "Claim Text Original",
+          "type": "string"
+        },
+        "claim_text_en": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Claim Text En"
+        },
+        "claim_type": {
+          "title": "Claim Type",
+          "type": "string"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target"
+        },
+        "qualifiers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Qualifiers",
+          "type": "array"
+        },
+        "linked_ingredient_ids": {
+          "description": "Ingredients plausibly related to the claim's target",
+          "items": {
+            "type": "string"
+          },
+          "title": "Linked Ingredient Ids",
+          "type": "array"
+        },
+        "research_questions": {
+          "description": "Questions the agent searched, in English",
+          "items": {
+            "type": "string"
+          },
+          "title": "Research Questions",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/ResearchStatus"
+        },
+        "finished_product_status": {
+          "$ref": "#/$defs/ResearchStatus",
+          "description": "Was any FINISHED_PRODUCT evidence found for this claim?"
+        },
+        "evidence_links": {
+          "items": {
+            "$ref": "#/$defs/ClaimEvidenceLink"
+          },
+          "title": "Evidence Links",
+          "type": "array"
+        },
+        "official_material_mentions_claim": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Does the official label/site make the same claim?",
+          "title": "Official Material Mentions Claim"
+        },
+        "official_material_finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Official Material Finding Ids",
+          "type": "array"
+        },
+        "queries_tried": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Queries Tried",
+          "type": "array"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes"
+        }
+      },
+      "required": [
+        "claim_id",
+        "claim_text_original",
+        "claim_type",
+        "status",
+        "finished_product_status"
+      ],
+      "title": "ClaimResearch",
+      "type": "object"
+    },
+    "ClaimType": {
+      "enum": [
+        "CURE",
+        "TREATMENT",
+        "PREVENTION",
+        "IMPROVEMENT",
+        "SAFETY",
+        "REPLACEMENT",
+        "OTHER"
+      ],
+      "title": "ClaimType",
+      "type": "string"
+    },
+    "ComposedIngredient": {
+      "additionalProperties": false,
+      "properties": {
+        "ingredient_id": {
+          "description": "e.g. 'ing_01'; used by IngredientResearch and ClaimResearch",
+          "title": "Ingredient Id",
+          "type": "string"
+        },
+        "name": {
+          "description": "As on the official/third-party source",
+          "title": "Name",
+          "type": "string"
+        },
+        "standardized_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Searchable English name, e.g. 'Gymnema sylvestre leaf extract'",
+          "title": "Standardized Name"
+        },
+        "amount": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Amount"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "per": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "'per capsule', 'per 10 ml' ...",
+          "title": "Per"
+        },
+        "information_class": {
+          "description": "InformationClass of the best finding for this ingredient",
+          "title": "Information Class",
+          "type": "string"
+        },
+        "finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Finding Ids",
+          "type": "array"
+        },
+        "ad_mention_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "AdIngredient.mention_id if the ad also shows it",
+          "title": "Ad Mention Id"
+        }
+      },
+      "required": [
+        "ingredient_id",
+        "name",
+        "information_class",
+        "finding_ids"
+      ],
+      "title": "ComposedIngredient",
+      "type": "object"
+    },
+    "Composition": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/ResearchStatus"
+        },
+        "ingredients": {
+          "items": {
+            "$ref": "#/$defs/ComposedIngredient"
+          },
+          "title": "Ingredients",
+          "type": "array"
+        },
+        "serving_size_finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Serving Size Finding Ids",
+          "type": "array"
+        },
+        "dosage_directions_finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Dosage Directions Finding Ids",
+          "type": "array"
+        },
+        "intended_purpose_finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Intended Purpose Finding Ids",
+          "type": "array"
+        },
+        "manufacturer_description_finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Manufacturer Description Finding Ids",
+          "type": "array"
+        },
+        "label_warning_finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Label Warning Finding Ids",
+          "type": "array"
+        },
+        "label_source_ids": {
+          "description": "Official label / insert sources used",
+          "items": {
+            "type": "string"
+          },
+          "title": "Label Source Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "Composition",
+      "type": "object"
+    },
+    "Conflict": {
+      "additionalProperties": false,
+      "properties": {
+        "topic": {
+          "description": "e.g. 'ingredient list', 'amount of vitamin D3'",
+          "title": "Topic",
+          "type": "string"
+        },
+        "finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Finding Ids",
+          "type": "array"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "required": [
+        "topic",
+        "finding_ids",
+        "description"
+      ],
+      "title": "Conflict",
+      "type": "object"
+    },
+    "Discrepancy": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/DiscrepancyKind"
+        },
+        "ad_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "AdExtraction path, e.g. 'ingredients[0]' or 'claims[c03]'",
+          "title": "Ad Ref"
+        },
+        "finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Finding Ids",
+          "type": "array"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "description"
+      ],
+      "title": "Discrepancy",
+      "type": "object"
+    },
+    "DiscrepancyKind": {
+      "enum": [
+        "INGREDIENT_IN_AD_NOT_IN_OFFICIAL",
+        "INGREDIENT_IN_OFFICIAL_NOT_IN_AD",
+        "AMOUNT_MISMATCH",
+        "DOSAGE_MISMATCH",
+        "NAME_OR_BRAND_MISMATCH",
+        "CLAIM_NOT_IN_OFFICIAL_MATERIAL",
+        "WARNING_IN_OFFICIAL_NOT_IN_AD"
+      ],
+      "title": "DiscrepancyKind",
+      "type": "string"
+    },
+    "DiseaseCaution": {
+      "additionalProperties": false,
+      "properties": {
+        "condition": {
+          "description": "e.g. 'pregnancy', 'chronic kidney disease'",
+          "title": "Condition",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Finding Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "condition",
+        "description"
+      ],
+      "title": "DiseaseCaution",
+      "type": "object"
+    },
+    "DrugInteraction": {
+      "additionalProperties": false,
+      "properties": {
+        "drug_or_class": {
+          "description": "e.g. 'insulin', 'sulfonylureas', 'warfarin'",
+          "title": "Drug Or Class",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "severity_reported": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Severity Reported"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Finding Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "drug_or_class",
+        "description"
+      ],
+      "title": "DrugInteraction",
+      "type": "object"
+    },
+    "EffectEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "effect": {
+          "description": "Proposed effect studied, e.g. 'lowers fasting blood glucose'",
+          "title": "Effect",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "description": "EvidenceRecords (scope INGREDIENT) about this effect",
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "summary": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What the linked studies report, neutral; no claim judgement",
+          "title": "Summary"
+        }
+      },
+      "required": [
+        "effect",
+        "evidence_ids"
+      ],
+      "title": "EffectEvidence",
+      "type": "object"
+    },
+    "EvidenceRecord": {
+      "additionalProperties": false,
+      "description": "One study (or registry entry) as read from its abstract or record.",
+      "properties": {
+        "evidence_id": {
+          "description": "e.g. 'ev_031'",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "scope": {
+          "$ref": "#/$defs/EvidenceScope"
+        },
+        "subject_id": {
+          "description": "ingredient_id for INGREDIENT scope, product candidate id for FINISHED_PRODUCT",
+          "title": "Subject Id",
+          "type": "string"
+        },
+        "subject_name": {
+          "title": "Subject Name",
+          "type": "string"
+        },
+        "source_id": {
+          "title": "Source Id",
+          "type": "string"
+        },
+        "study_type": {
+          "$ref": "#/$defs/StudyType"
+        },
+        "human_study": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Human Study"
+        },
+        "population": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Population"
+        },
+        "sample_size": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sample Size"
+        },
+        "intervention": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Intervention"
+        },
+        "dose": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Dose tested, as reported",
+          "title": "Dose"
+        },
+        "duration": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration"
+        },
+        "comparator": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Comparator"
+        },
+        "outcomes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Outcomes",
+          "type": "array"
+        },
+        "result_summary": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What the study reports, in neutral words; no judgement of the ad",
+          "title": "Result Summary"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "passage": {
+          "description": "Abstract/record excerpt supporting result_summary",
+          "title": "Passage",
+          "type": "string"
+        },
+        "abstract_available": {
+          "title": "Abstract Available",
+          "type": "boolean"
+        },
+        "validation": {
+          "$ref": "#/$defs/Validation"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "scope",
+        "subject_id",
+        "subject_name",
+        "source_id",
+        "study_type",
+        "passage",
+        "abstract_available",
+        "validation"
+      ],
+      "title": "EvidenceRecord",
+      "type": "object"
+    },
+    "EvidenceRelation": {
+      "description": "Relation of ONE source to the claim's topic, as the source states it.\nThis is a description of the source, not a decision about the claim.",
+      "enum": [
+        "SUPPORTS",
+        "CONTRADICTS",
+        "CONTEXT"
+      ],
+      "title": "EvidenceRelation",
+      "type": "string"
+    },
+    "EvidenceScope": {
+      "description": "Kept apart everywhere: ingredient evidence is never product evidence.",
+      "enum": [
+        "INGREDIENT",
+        "FINISHED_PRODUCT"
+      ],
+      "title": "EvidenceScope",
+      "type": "string"
+    },
+    "ExtractorInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "description": "'grounded_llm', 'regex_baseline', later the custom model",
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "title": "ExtractorInfo",
+      "type": "object"
+    },
+    "Finding": {
+      "additionalProperties": false,
+      "description": "One atomic fact about the product or an ingredient, with provenance.",
+      "properties": {
+        "finding_id": {
+          "description": "e.g. 'f_012'",
+          "title": "Finding Id",
+          "type": "string"
+        },
+        "field": {
+          "description": "What the fact is about, e.g. 'ingredient', 'amount', 'manufacturer_name', 'registration_number', 'dosage', 'intended_purpose', 'warning'",
+          "title": "Field",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "subject_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "product candidate id or ingredient_id this fact belongs to",
+          "title": "Subject Id"
+        },
+        "source_id": {
+          "title": "Source Id",
+          "type": "string"
+        },
+        "passage": {
+          "description": "Supporting text copied from the source",
+          "title": "Passage",
+          "type": "string"
+        },
+        "information_class": {
+          "$ref": "#/$defs/InformationClass"
+        },
+        "validation": {
+          "$ref": "#/$defs/Validation"
+        }
+      },
+      "required": [
+        "finding_id",
+        "field",
+        "value",
+        "source_id",
+        "passage",
+        "information_class",
+        "validation"
+      ],
+      "title": "Finding",
+      "type": "object"
+    },
+    "FinishedProductResearch": {
+      "additionalProperties": false,
+      "description": "Studies on the exact finished product. Never filled from ingredient studies.",
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/ResearchStatus"
+        },
+        "evidence_ids": {
+          "description": "EvidenceRecords with scope FINISHED_PRODUCT",
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "manufacturer_claimed_studies": {
+          "description": "finding_ids where the manufacturer cites a study that was not independently found",
+          "items": {
+            "type": "string"
+          },
+          "title": "Manufacturer Claimed Studies",
+          "type": "array"
+        },
+        "queries_tried": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Queries Tried",
+          "type": "array"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "FinishedProductResearch",
+      "type": "object"
+    },
+    "IdentityStatus": {
+      "enum": [
+        "VERIFIED",
+        "PROBABLE",
+        "IDENTITY_UNCERTAIN",
+        "NOT_FOUND"
+      ],
+      "title": "IdentityStatus",
+      "type": "string"
+    },
+    "InformationClass": {
+      "description": "How a finding should be read. Shown separately in the report and to the verifier.",
+      "enum": [
+        "AD_STATED",
+        "OFFICIAL_MANUFACTURER",
+        "OFFICIAL_LABEL",
+        "REGULATORY",
+        "THIRD_PARTY",
+        "SCIENTIFIC_EVIDENCE",
+        "UNVERIFIED",
+        "CONFLICTING"
+      ],
+      "title": "InformationClass",
+      "type": "string"
+    },
+    "IngredientResearch": {
+      "additionalProperties": false,
+      "properties": {
+        "ingredient_id": {
+          "description": "Matches ComposedIngredient.ingredient_id",
+          "title": "Ingredient Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "standardized_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Standardized Name"
+        },
+        "scientific_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scientific Name"
+        },
+        "synonyms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Synonyms",
+          "type": "array"
+        },
+        "origin": {
+          "description": "'AD_ONLY', 'OFFICIAL_ONLY', 'AD_AND_OFFICIAL', 'THIRD_PARTY_ONLY'",
+          "title": "Origin",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ResearchStatus"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What the ingredient is, from a cited reference source",
+          "title": "Description"
+        },
+        "description_finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Description Finding Ids",
+          "type": "array"
+        },
+        "effects": {
+          "items": {
+            "$ref": "#/$defs/EffectEvidence"
+          },
+          "title": "Effects",
+          "type": "array"
+        },
+        "evidence_ids": {
+          "description": "All studies found for this ingredient",
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "tested_dose_range": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Range of doses used in the linked human studies, as reported",
+          "title": "Tested Dose Range"
+        },
+        "safety": {
+          "$ref": "#/$defs/IngredientSafety"
+        },
+        "queries_tried": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Queries Tried",
+          "type": "array"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes"
+        }
+      },
+      "required": [
+        "ingredient_id",
+        "name",
+        "origin",
+        "status",
+        "safety"
+      ],
+      "title": "IngredientResearch",
+      "type": "object"
+    },
+    "IngredientSafety": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/ResearchStatus"
+        },
+        "side_effects": {
+          "items": {
+            "$ref": "#/$defs/SafetyItem"
+          },
+          "title": "Side Effects",
+          "type": "array"
+        },
+        "contraindications": {
+          "items": {
+            "$ref": "#/$defs/SafetyItem"
+          },
+          "title": "Contraindications",
+          "type": "array"
+        },
+        "drug_interactions": {
+          "items": {
+            "$ref": "#/$defs/DrugInteraction"
+          },
+          "title": "Drug Interactions",
+          "type": "array"
+        },
+        "disease_cautions": {
+          "items": {
+            "$ref": "#/$defs/DiseaseCaution"
+          },
+          "title": "Disease Cautions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "IngredientSafety",
+      "type": "object"
+    },
+    "LogEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "step": {
+          "title": "Step",
+          "type": "integer"
+        },
+        "phase": {
+          "description": "identity | brand_manufacturer | official_sources | composition | ingredient | finished_product | claim | safety | validation",
+          "title": "Phase",
+          "type": "string"
+        },
+        "action": {
+          "description": "'search', 'fetch', 'read', 'validate', 'plan'",
+          "title": "Action",
+          "type": "string"
+        },
+        "tool": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tool"
+        },
+        "query": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query"
+        },
+        "target_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Url"
+        },
+        "result_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Result Count"
+        },
+        "produced_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Produced Ids",
+          "type": "array"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error"
+        },
+        "at": {
+          "format": "date-time",
+          "title": "At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "step",
+        "phase",
+        "action",
+        "at"
+      ],
+      "title": "LogEntry",
+      "type": "object"
+    },
+    "MatchLevel": {
+      "enum": [
+        "SAME",
+        "SIMILAR",
+        "DIFFERENT",
+        "UNKNOWN"
+      ],
+      "title": "MatchLevel",
+      "type": "string"
+    },
+    "MatchScores": {
+      "additionalProperties": false,
+      "description": "0..1 per criterion; None when the ad gives nothing to compare.",
+      "properties": {
+        "name": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "brand": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Brand"
+        },
+        "manufacturer": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Manufacturer"
+        },
+        "ingredient_overlap": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ingredient Overlap"
+        },
+        "form_and_pack": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Form And Pack"
+        },
+        "country": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Country"
+        }
+      },
+      "title": "MatchScores",
+      "type": "object"
+    },
+    "MissingItem": {
+      "additionalProperties": false,
+      "properties": {
+        "item": {
+          "description": "e.g. 'official label', 'amount of chromium picolinate', 'studies on finished product'",
+          "title": "Item",
+          "type": "string"
+        },
+        "phase": {
+          "title": "Phase",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ResearchStatus"
+        },
+        "queries_tried": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Queries Tried",
+          "type": "array"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        }
+      },
+      "required": [
+        "item",
+        "phase",
+        "status"
+      ],
+      "title": "MissingItem",
+      "type": "object"
+    },
+    "ProductCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_id": {
+          "description": "e.g. 'prod_c1'",
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "brand": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Brand"
+        },
+        "manufacturer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Manufacturer"
+        },
+        "country": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Country"
+        },
+        "form": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "capsule, tablet, powder, syrup ...",
+          "title": "Form"
+        },
+        "source_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        },
+        "match_scores": {
+          "$ref": "#/$defs/MatchScores"
+        },
+        "overall_score": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Overall Score",
+          "type": "number"
+        },
+        "rejected_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Why this look-alike is not the advertised product",
+          "title": "Rejected Reason"
+        }
+      },
+      "required": [
+        "candidate_id",
+        "name",
+        "source_ids",
+        "match_scores",
+        "overall_score"
+      ],
+      "title": "ProductCandidate",
+      "type": "object"
+    },
+    "ProductIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/IdentityStatus"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "chosen_candidate_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Chosen Candidate Id"
+        },
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/ProductCandidate"
+          },
+          "title": "Candidates",
+          "type": "array"
+        },
+        "reasoning": {
+          "description": "Which evidence decided identity, in plain words",
+          "title": "Reasoning",
+          "type": "string"
+        },
+        "queries_tried": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Queries Tried",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status",
+        "confidence",
+        "reasoning"
+      ],
+      "title": "ProductIdentity",
+      "type": "object"
+    },
+    "ProductResearch": {
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "$ref": "#/$defs/ProductIdentity"
+        },
+        "brand_manufacturer": {
+          "$ref": "#/$defs/BrandManufacturer"
+        },
+        "composition": {
+          "$ref": "#/$defs/Composition"
+        },
+        "regulatory": {
+          "items": {
+            "$ref": "#/$defs/RegulatoryRecord"
+          },
+          "title": "Regulatory",
+          "type": "array"
+        },
+        "ad_vs_official": {
+          "items": {
+            "$ref": "#/$defs/Discrepancy"
+          },
+          "title": "Ad Vs Official",
+          "type": "array"
+        },
+        "finished_product": {
+          "$ref": "#/$defs/FinishedProductResearch"
+        }
+      },
+      "required": [
+        "identity",
+        "brand_manufacturer",
+        "composition",
+        "finished_product"
+      ],
+      "title": "ProductResearch",
+      "type": "object"
+    },
+    "RegulatoryRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "authority": {
+          "description": "e.g. 'DGDA (Bangladesh)', 'BSTI', 'FDA'",
+          "title": "Authority",
+          "type": "string"
+        },
+        "registration_number": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Registration Number"
+        },
+        "category": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "e.g. 'Ayurvedic', 'Unani', 'food supplement'",
+          "title": "Category"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status"
+        },
+        "finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Finding Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "authority",
+        "finding_ids"
+      ],
+      "title": "RegulatoryRecord",
+      "type": "object"
+    },
+    "RejectedItem": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "description": "e.g. 'claims[3]'",
+          "title": "Path",
+          "type": "string"
+        },
+        "problems": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Problems",
+          "type": "array"
+        },
+        "item": {
+          "title": "Item",
+          "type": "object"
+        }
+      },
+      "required": [
+        "path",
+        "problems",
+        "item"
+      ],
+      "title": "RejectedItem",
+      "type": "object"
+    },
+    "ResearchBudget": {
+      "additionalProperties": false,
+      "properties": {
+        "max_search_calls": {
+          "title": "Max Search Calls",
+          "type": "integer"
+        },
+        "max_fetches": {
+          "title": "Max Fetches",
+          "type": "integer"
+        },
+        "max_llm_calls": {
+          "title": "Max Llm Calls",
+          "type": "integer"
+        },
+        "max_retries_per_call": {
+          "title": "Max Retries Per Call",
+          "type": "integer"
+        },
+        "max_seconds": {
+          "title": "Max Seconds",
+          "type": "integer"
+        },
+        "used_search_calls": {
+          "default": 0,
+          "title": "Used Search Calls",
+          "type": "integer"
+        },
+        "used_fetches": {
+          "default": 0,
+          "title": "Used Fetches",
+          "type": "integer"
+        },
+        "used_llm_calls": {
+          "default": 0,
+          "title": "Used Llm Calls",
+          "type": "integer"
+        },
+        "elapsed_seconds": {
+          "default": 0,
+          "title": "Elapsed Seconds",
+          "type": "number"
+        },
+        "exhausted": {
+          "default": false,
+          "title": "Exhausted",
+          "type": "boolean"
+        },
+        "exhausted_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "'search', 'fetch', 'llm', 'time'",
+          "title": "Exhausted Reason"
+        }
+      },
+      "required": [
+        "max_search_calls",
+        "max_fetches",
+        "max_llm_calls",
+        "max_retries_per_call",
+        "max_seconds"
+      ],
+      "title": "ResearchBudget",
+      "type": "object"
+    },
+    "ResearchStatus": {
+      "description": "Outcome of a research question. Absence of evidence is never 'false'.",
+      "enum": [
+        "FOUND",
+        "PARTIAL",
+        "NOT_FOUND",
+        "IDENTITY_UNCERTAIN",
+        "NO_RELEVANT_STUDY_FOUND",
+        "CONFLICTING",
+        "NOT_SEARCHED"
+      ],
+      "title": "ResearchStatus",
+      "type": "string"
+    },
+    "SafetyItem": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "severity_reported": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "As stated by the source, not assigned by the agent",
+          "title": "Severity Reported"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Finding Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "description"
+      ],
+      "title": "SafetyItem",
+      "type": "object"
+    },
+    "SafetySummary": {
+      "additionalProperties": false,
+      "description": "Cross-ingredient view for the report and later patient-risk step. References only;\nthe detail lives in IngredientResearch.safety.",
+      "properties": {
+        "ingredient_ids_with_interactions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Ingredient Ids With Interactions",
+          "type": "array"
+        },
+        "ingredient_ids_with_disease_cautions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Ingredient Ids With Disease Cautions",
+          "type": "array"
+        },
+        "label_warning_finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Label Warning Finding Ids",
+          "type": "array"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes"
+        }
+      },
+      "title": "SafetySummary",
+      "type": "object"
+    },
+    "Source": {
+      "additionalProperties": false,
+      "properties": {
+        "source_id": {
+          "description": "Stable id within the dossier, e.g. 'src_007'",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "source_type": {
+          "$ref": "#/$defs/SourceType"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Url"
+        },
+        "doi": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Doi"
+        },
+        "pmid": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pmid"
+        },
+        "pmcid": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pmcid"
+        },
+        "nct_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "ClinicalTrials.gov id",
+          "title": "Nct Id"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        },
+        "site_or_publisher": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Site Or Publisher"
+        },
+        "authors": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Authors",
+          "type": "array"
+        },
+        "journal": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Journal"
+        },
+        "publication_year": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Publication Year"
+        },
+        "publication_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "As given by the source, ISO when parseable",
+          "title": "Publication Date"
+        },
+        "language": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "'bn', 'en', ...",
+          "title": "Language"
+        },
+        "retrieved_at": {
+          "format": "date-time",
+          "title": "Retrieved At",
+          "type": "string"
+        },
+        "retrieved_by_tool": {
+          "description": "e.g. 'web_search:duckduckgo', 'fetch_page', 'pubmed_efetch'",
+          "title": "Retrieved By Tool",
+          "type": "string"
+        },
+        "content_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "sha256 of the fetched text, so passages can be re-checked",
+          "title": "Content Hash"
+        },
+        "reliability_rank": {
+          "description": "1 = most reliable; see SOURCE_RANK in the agent",
+          "maximum": 9,
+          "minimum": 1,
+          "title": "Reliability Rank",
+          "type": "integer"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes"
+        }
+      },
+      "required": [
+        "source_id",
+        "source_type",
+        "retrieved_at",
+        "retrieved_by_tool",
+        "reliability_rank"
+      ],
+      "title": "Source",
+      "type": "object"
+    },
+    "SourceType": {
+      "enum": [
+        "OFFICIAL_MANUFACTURER",
+        "OFFICIAL_LABEL",
+        "REGULATORY",
+        "THIRD_PARTY_RETAIL",
+        "THIRD_PARTY_OTHER",
+        "SCIENTIFIC_LITERATURE",
+        "CLINICAL_TRIAL_REGISTRY",
+        "DRUG_LABEL_DATABASE",
+        "REFERENCE_DATABASE",
+        "ADVERTISEMENT"
+      ],
+      "title": "SourceType",
+      "type": "string"
+    },
+    "StudyType": {
+      "enum": [
+        "SYSTEMATIC_REVIEW",
+        "META_ANALYSIS",
+        "RCT",
+        "NON_RANDOMIZED_TRIAL",
+        "OBSERVATIONAL",
+        "CASE_REPORT",
+        "ANIMAL",
+        "IN_VITRO",
+        "NARRATIVE_REVIEW",
+        "REGISTERED_TRIAL_NO_RESULTS",
+        "OTHER",
+        "UNKNOWN"
+      ],
+      "title": "StudyType",
+      "type": "string"
+    },
+    "TextSpan": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "description": "Verbatim span of the ad's OCR/transcript text",
+          "title": "Text",
+          "type": "string"
+        },
+        "segment_id": {
+          "title": "Segment Id",
+          "type": "string"
+        },
+        "line_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Line Ids",
+          "type": "array"
+        },
+        "start_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "For video frames / speech",
+          "title": "Start Ms"
+        }
+      },
+      "required": [
+        "text",
+        "segment_id"
+      ],
+      "title": "TextSpan",
+      "type": "object"
+    },
+    "Validation": {
+      "additionalProperties": false,
+      "description": "Checks run on every finding before it enters the dossier.\n\nquote_in_source and value_in_passage are deterministic string checks.\nrefers_to_product and passage_supports_finding are semantic checks (LLM\nreader with a fixed prompt, or rule) and record who made them.",
+      "properties": {
+        "quote_in_source": {
+          "description": "Passage found verbatim (after normalisation) in the fetched source text",
+          "title": "Quote In Source",
+          "type": "boolean"
+        },
+        "value_in_passage": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The finding's value (name, number, unit) appears in the passage; None when not applicable",
+          "title": "Value In Passage"
+        },
+        "refers_to_product": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Source is about the identified product (not a look-alike); None for ingredient-level literature",
+          "title": "Refers To Product"
+        },
+        "passage_supports_finding": {
+          "description": "Passage actually states the finding, not just mentions the words",
+          "title": "Passage Supports Finding",
+          "type": "boolean"
+        },
+        "checked_by": {
+          "description": "'rule', or the reader model id, e.g. 'gemini-flash-lite-latest'",
+          "title": "Checked By",
+          "type": "string"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes"
+        }
+      },
+      "required": [
+        "quote_in_source",
+        "passage_supports_finding",
+        "checked_by"
+      ],
+      "title": "Validation",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "default": "2.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "dossier_id": {
+      "title": "Dossier Id",
+      "type": "string"
+    },
+    "ad_id": {
+      "title": "Ad Id",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "agent": {
+      "$ref": "#/$defs/AgentInfo"
+    },
+    "budget": {
+      "$ref": "#/$defs/ResearchBudget"
+    },
+    "advertisement": {
+      "$ref": "#/$defs/AdExtraction",
+      "description": "Exactly what the ad shows; copied, never edited by the agent"
+    },
+    "product": {
+      "$ref": "#/$defs/ProductResearch"
+    },
+    "ingredients": {
+      "items": {
+        "$ref": "#/$defs/IngredientResearch"
+      },
+      "title": "Ingredients",
+      "type": "array"
+    },
+    "claims": {
+      "items": {
+        "$ref": "#/$defs/ClaimResearch"
+      },
+      "title": "Claims",
+      "type": "array"
+    },
+    "safety": {
+      "$ref": "#/$defs/SafetySummary"
+    },
+    "sources": {
+      "items": {
+        "$ref": "#/$defs/Source"
+      },
+      "title": "Sources",
+      "type": "array"
+    },
+    "findings": {
+      "items": {
+        "$ref": "#/$defs/Finding"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "evidence": {
+      "items": {
+        "$ref": "#/$defs/EvidenceRecord"
+      },
+      "title": "Evidence",
+      "type": "array"
+    },
+    "conflicts": {
+      "items": {
+        "$ref": "#/$defs/Conflict"
+      },
+      "title": "Conflicts",
+      "type": "array"
+    },
+    "missing_information": {
+      "items": {
+        "$ref": "#/$defs/MissingItem"
+      },
+      "title": "Missing Information",
+      "type": "array"
+    },
+    "uncertainties": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Uncertainties",
+      "type": "array"
+    },
+    "research_log": {
+      "items": {
+        "$ref": "#/$defs/LogEntry"
+      },
+      "title": "Research Log",
+      "type": "array"
+    },
+    "disclaimer": {
+      "default": "This dossier collects and organises sources. It contains no verdict on any claim and is not medical advice. Ingredient-level evidence does not show that the finished product is effective.",
+      "title": "Disclaimer",
+      "type": "string"
+    }
+  },
+  "required": [
+    "dossier_id",
+    "ad_id",
+    "created_at",
+    "agent",
+    "budget",
+    "advertisement",
+    "product"
+  ],
+  "title": "ResearchDossierV2",
+  "type": "object"
+}

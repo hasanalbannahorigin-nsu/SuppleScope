@@ -1,0 +1,120 @@
+{
+  "$defs": {
+    "VerdictLabel": {
+      "enum": [
+        "SUPPORTED",
+        "PARTIALLY_SUPPORTED",
+        "CONTRADICTED",
+        "INSUFFICIENT_EVIDENCE",
+        "NOT_ASSESSABLE"
+      ],
+      "title": "VerdictLabel",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Written only by the custom Verification Model (guide section 7).",
+  "properties": {
+    "schema_version": {
+      "default": "2.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "dossier_id": {
+      "title": "Dossier Id",
+      "type": "string"
+    },
+    "ad_id": {
+      "title": "Ad Id",
+      "type": "string"
+    },
+    "claim_id": {
+      "title": "Claim Id",
+      "type": "string"
+    },
+    "label": {
+      "$ref": "#/$defs/VerdictLabel"
+    },
+    "confidence": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Confidence"
+    },
+    "label_probabilities": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "propertyNames": {
+            "$ref": "#/$defs/VerdictLabel"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Label Probabilities"
+    },
+    "abstained": {
+      "default": false,
+      "title": "Abstained",
+      "type": "boolean"
+    },
+    "rationale": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Rationale"
+    },
+    "evidence_ids": {
+      "description": "Evidence the model relied on",
+      "items": {
+        "type": "string"
+      },
+      "title": "Evidence Ids",
+      "type": "array"
+    },
+    "model_name": {
+      "title": "Model Name",
+      "type": "string"
+    },
+    "model_version": {
+      "title": "Model Version",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "dossier_id",
+    "ad_id",
+    "claim_id",
+    "label",
+    "model_name",
+    "model_version",
+    "created_at"
+  ],
+  "title": "VerifierOutput",
+  "type": "object"
+}

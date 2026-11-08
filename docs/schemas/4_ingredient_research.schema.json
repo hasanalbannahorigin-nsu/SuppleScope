@@ -1,0 +1,347 @@
+{
+  "$defs": {
+    "DiseaseCaution": {
+      "additionalProperties": false,
+      "properties": {
+        "condition": {
+          "description": "e.g. 'pregnancy', 'chronic kidney disease'",
+          "title": "Condition",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Finding Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "condition",
+        "description"
+      ],
+      "title": "DiseaseCaution",
+      "type": "object"
+    },
+    "DrugInteraction": {
+      "additionalProperties": false,
+      "properties": {
+        "drug_or_class": {
+          "description": "e.g. 'insulin', 'sulfonylureas', 'warfarin'",
+          "title": "Drug Or Class",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "severity_reported": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Severity Reported"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Finding Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "drug_or_class",
+        "description"
+      ],
+      "title": "DrugInteraction",
+      "type": "object"
+    },
+    "EffectEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "effect": {
+          "description": "Proposed effect studied, e.g. 'lowers fasting blood glucose'",
+          "title": "Effect",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "description": "EvidenceRecords (scope INGREDIENT) about this effect",
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "summary": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What the linked studies report, neutral; no claim judgement",
+          "title": "Summary"
+        }
+      },
+      "required": [
+        "effect",
+        "evidence_ids"
+      ],
+      "title": "EffectEvidence",
+      "type": "object"
+    },
+    "IngredientSafety": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/ResearchStatus"
+        },
+        "side_effects": {
+          "items": {
+            "$ref": "#/$defs/SafetyItem"
+          },
+          "title": "Side Effects",
+          "type": "array"
+        },
+        "contraindications": {
+          "items": {
+            "$ref": "#/$defs/SafetyItem"
+          },
+          "title": "Contraindications",
+          "type": "array"
+        },
+        "drug_interactions": {
+          "items": {
+            "$ref": "#/$defs/DrugInteraction"
+          },
+          "title": "Drug Interactions",
+          "type": "array"
+        },
+        "disease_cautions": {
+          "items": {
+            "$ref": "#/$defs/DiseaseCaution"
+          },
+          "title": "Disease Cautions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "IngredientSafety",
+      "type": "object"
+    },
+    "ResearchStatus": {
+      "description": "Outcome of a research question. Absence of evidence is never 'false'.",
+      "enum": [
+        "FOUND",
+        "PARTIAL",
+        "NOT_FOUND",
+        "IDENTITY_UNCERTAIN",
+        "NO_RELEVANT_STUDY_FOUND",
+        "CONFLICTING",
+        "NOT_SEARCHED"
+      ],
+      "title": "ResearchStatus",
+      "type": "string"
+    },
+    "SafetyItem": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "severity_reported": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "As stated by the source, not assigned by the agent",
+          "title": "Severity Reported"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Finding Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "description"
+      ],
+      "title": "SafetyItem",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "ingredient_id": {
+      "description": "Matches ComposedIngredient.ingredient_id",
+      "title": "Ingredient Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "standardized_name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Standardized Name"
+    },
+    "scientific_name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Scientific Name"
+    },
+    "synonyms": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Synonyms",
+      "type": "array"
+    },
+    "origin": {
+      "description": "'AD_ONLY', 'OFFICIAL_ONLY', 'AD_AND_OFFICIAL', 'THIRD_PARTY_ONLY'",
+      "title": "Origin",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/ResearchStatus"
+    },
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "What the ingredient is, from a cited reference source",
+      "title": "Description"
+    },
+    "description_finding_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Description Finding Ids",
+      "type": "array"
+    },
+    "effects": {
+      "items": {
+        "$ref": "#/$defs/EffectEvidence"
+      },
+      "title": "Effects",
+      "type": "array"
+    },
+    "evidence_ids": {
+      "description": "All studies found for this ingredient",
+      "items": {
+        "type": "string"
+      },
+      "title": "Evidence Ids",
+      "type": "array"
+    },
+    "tested_dose_range": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Range of doses used in the linked human studies, as reported",
+      "title": "Tested Dose Range"
+    },
+    "safety": {
+      "$ref": "#/$defs/IngredientSafety"
+    },
+    "queries_tried": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Queries Tried",
+      "type": "array"
+    },
+    "notes": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Notes"
+    }
+  },
+  "required": [
+    "ingredient_id",
+    "name",
+    "origin",
+    "status",
+    "safety"
+  ],
+  "title": "IngredientResearch",
+  "type": "object"
+}

@@ -1,0 +1,170 @@
+{
+  "schema_version": "2.0.0",
+  "dossier_id": "dos_example_001",
+  "ad_id": "ad_example_001",
+  "claim": {
+    "claim_id": "c01",
+    "text_original": "সুগার লেভেল নিয়ন্ত্রণে বিশেষ ভূমিকা পালন করে",
+    "text_en": "plays a special role in controlling sugar level",
+    "claim_type": "TREATMENT",
+    "target": "ডায়াবেটিস",
+    "target_en": "diabetes",
+    "qualifiers": [
+      "সকল ধরনের ডায়াবেটিক রোগীদের"
+    ],
+    "negated": false,
+    "span": {
+      "text": "সুগার লেভেল নিযন্ত্রগে বিশেষ ভূমিকা পালন করে",
+      "segment_id": "seg01",
+      "line_ids": [
+        "seg01_l016"
+      ]
+    }
+  },
+  "product": {
+    "identity_status": "PROBABLE",
+    "identity_confidence": 0.7,
+    "product_name": "EXAMPLE PRODUCT NAME",
+    "brand": "EXAMPLE BRAND",
+    "manufacturer": "EXAMPLE MANUFACTURER",
+    "composition_status": "PARTIAL",
+    "finished_product_status": "NO_RELEVANT_STUDY_FOUND"
+  },
+  "related_ingredients": [
+    {
+      "ingredient_id": "ing_01",
+      "name": "Example Ingredient A",
+      "standardized_name": "Example ingredient A extract",
+      "amount": "250",
+      "unit": "mg",
+      "per": "per capsule",
+      "information_class": "THIRD_PARTY",
+      "finding_ids": [
+        "f_001"
+      ]
+    }
+  ],
+  "evidence_links": [
+    {
+      "evidence_id": "ev_001",
+      "scope": "INGREDIENT",
+      "ingredient_id": "ing_01",
+      "relation": "SUPPORTS",
+      "match": {
+        "outcome": "SIMILAR",
+        "population": "SIMILAR",
+        "dose": "DIFFERENT",
+        "intervention": "SIMILAR",
+        "qualifiers": "DIFFERENT",
+        "human_evidence": true,
+        "notes": "EXAMPLE: type 2 only, not 'all types'; higher dose than the product."
+      },
+      "relevant_passage": "EXAMPLE passage from the abstract."
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_id": "ev_001",
+      "scope": "INGREDIENT",
+      "subject_id": "ing_01",
+      "subject_name": "Example Ingredient A",
+      "source_id": "src_003",
+      "study_type": "RCT",
+      "human_study": true,
+      "population": "EXAMPLE: adults with type 2 diabetes",
+      "sample_size": 60,
+      "intervention": "EXAMPLE extract",
+      "dose": "400 mg/day",
+      "duration": "12 weeks",
+      "comparator": "placebo",
+      "outcomes": [
+        "fasting plasma glucose"
+      ],
+      "result_summary": "EXAMPLE: modest reduction vs placebo.",
+      "limitations": [
+        "small sample",
+        "single centre"
+      ],
+      "passage": "EXAMPLE abstract excerpt.",
+      "abstract_available": true,
+      "validation": {
+        "quote_in_source": true,
+        "value_in_passage": true,
+        "passage_supports_finding": true,
+        "checked_by": "gemini-flash-lite-latest"
+      }
+    }
+  ],
+  "findings": [
+    {
+      "finding_id": "f_001",
+      "field": "ingredient",
+      "value": "Example Ingredient A",
+      "subject_id": "prod_c1",
+      "source_id": "src_001",
+      "passage": "EXAMPLE: Each capsule contains Example Ingredient A 250 mg",
+      "information_class": "THIRD_PARTY",
+      "validation": {
+        "quote_in_source": true,
+        "value_in_passage": true,
+        "refers_to_product": true,
+        "passage_supports_finding": true,
+        "checked_by": "rule"
+      }
+    }
+  ],
+  "discrepancies": [],
+  "sources": [
+    {
+      "source_id": "src_003",
+      "source_type": "SCIENTIFIC_LITERATURE",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/00000000/",
+      "doi": "10.0000/example.0000",
+      "pmid": "00000000",
+      "title": "EXAMPLE trial title",
+      "authors": [
+        "Example A",
+        "Example B"
+      ],
+      "journal": "Example Journal",
+      "publication_year": 2020,
+      "retrieved_at": "2026-11-08T18:57:00Z",
+      "retrieved_by_tool": "pubmed_efetch",
+      "reliability_rank": 3
+    },
+    {
+      "source_id": "src_001",
+      "source_type": "THIRD_PARTY_RETAIL",
+      "url": "https://example.org/retail/example-product",
+      "title": "EXAMPLE retail listing",
+      "authors": [],
+      "retrieved_at": "2026-11-08T18:55:00Z",
+      "retrieved_by_tool": "fetch_page",
+      "reliability_rank": 6
+    }
+  ],
+  "claim_research_status": "FOUND",
+  "missing_information": [
+    {
+      "item": "official label",
+      "phase": "official_sources",
+      "status": "NOT_FOUND",
+      "queries_tried": [
+        "DIBEDEX label",
+        "DIBEDEX ingredients"
+      ],
+      "reason": "EXAMPLE: no manufacturer site found."
+    },
+    {
+      "item": "studies on the finished product",
+      "phase": "finished_product",
+      "status": "NO_RELEVANT_STUDY_FOUND",
+      "queries_tried": [
+        "\"DIBEDEX\"[All Fields]"
+      ]
+    }
+  ],
+  "uncertainties": [
+    "EXAMPLE: identity is PROBABLE, not VERIFIED; composition comes from one retail listing."
+  ]
+}

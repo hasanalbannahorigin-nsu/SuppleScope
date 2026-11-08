@@ -1,0 +1,277 @@
+{
+  "$defs": {
+    "ClaimEvidenceLink": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_id": {
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "scope": {
+          "$ref": "#/$defs/EvidenceScope",
+          "description": "INGREDIENT or FINISHED_PRODUCT; copied from the EvidenceRecord"
+        },
+        "ingredient_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Set when scope is INGREDIENT",
+          "title": "Ingredient Id"
+        },
+        "relation": {
+          "$ref": "#/$defs/EvidenceRelation"
+        },
+        "match": {
+          "$ref": "#/$defs/ClaimEvidenceMatch"
+        },
+        "relevant_passage": {
+          "description": "The part of the evidence passage that bears on this claim",
+          "title": "Relevant Passage",
+          "type": "string"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "scope",
+        "relation",
+        "match",
+        "relevant_passage"
+      ],
+      "title": "ClaimEvidenceLink",
+      "type": "object"
+    },
+    "ClaimEvidenceMatch": {
+      "additionalProperties": false,
+      "description": "How closely a study matches what the ad actually says.",
+      "properties": {
+        "outcome": {
+          "$ref": "#/$defs/MatchLevel",
+          "description": "Study outcome vs the claimed effect"
+        },
+        "population": {
+          "$ref": "#/$defs/MatchLevel",
+          "description": "Study population vs the ad's audience"
+        },
+        "dose": {
+          "$ref": "#/$defs/MatchLevel",
+          "description": "Tested dose vs the product's dose (if known)"
+        },
+        "intervention": {
+          "$ref": "#/$defs/MatchLevel",
+          "description": "Same finished product, same ingredient form, or different"
+        },
+        "qualifiers": {
+          "$ref": "#/$defs/MatchLevel",
+          "description": "Magnitude / time frame / absoluteness ('in 7 days', 'permanently')"
+        },
+        "human_evidence": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Human Evidence"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes"
+        }
+      },
+      "required": [
+        "outcome",
+        "population",
+        "dose",
+        "intervention",
+        "qualifiers"
+      ],
+      "title": "ClaimEvidenceMatch",
+      "type": "object"
+    },
+    "EvidenceRelation": {
+      "description": "Relation of ONE source to the claim's topic, as the source states it.\nThis is a description of the source, not a decision about the claim.",
+      "enum": [
+        "SUPPORTS",
+        "CONTRADICTS",
+        "CONTEXT"
+      ],
+      "title": "EvidenceRelation",
+      "type": "string"
+    },
+    "EvidenceScope": {
+      "description": "Kept apart everywhere: ingredient evidence is never product evidence.",
+      "enum": [
+        "INGREDIENT",
+        "FINISHED_PRODUCT"
+      ],
+      "title": "EvidenceScope",
+      "type": "string"
+    },
+    "MatchLevel": {
+      "enum": [
+        "SAME",
+        "SIMILAR",
+        "DIFFERENT",
+        "UNKNOWN"
+      ],
+      "title": "MatchLevel",
+      "type": "string"
+    },
+    "ResearchStatus": {
+      "description": "Outcome of a research question. Absence of evidence is never 'false'.",
+      "enum": [
+        "FOUND",
+        "PARTIAL",
+        "NOT_FOUND",
+        "IDENTITY_UNCERTAIN",
+        "NO_RELEVANT_STUDY_FOUND",
+        "CONFLICTING",
+        "NOT_SEARCHED"
+      ],
+      "title": "ResearchStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "claim_id": {
+      "description": "AdClaim.claim_id",
+      "title": "Claim Id",
+      "type": "string"
+    },
+    "claim_text_original": {
+      "title": "Claim Text Original",
+      "type": "string"
+    },
+    "claim_text_en": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Claim Text En"
+    },
+    "claim_type": {
+      "title": "Claim Type",
+      "type": "string"
+    },
+    "target": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Target"
+    },
+    "qualifiers": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Qualifiers",
+      "type": "array"
+    },
+    "linked_ingredient_ids": {
+      "description": "Ingredients plausibly related to the claim's target",
+      "items": {
+        "type": "string"
+      },
+      "title": "Linked Ingredient Ids",
+      "type": "array"
+    },
+    "research_questions": {
+      "description": "Questions the agent searched, in English",
+      "items": {
+        "type": "string"
+      },
+      "title": "Research Questions",
+      "type": "array"
+    },
+    "status": {
+      "$ref": "#/$defs/ResearchStatus"
+    },
+    "finished_product_status": {
+      "$ref": "#/$defs/ResearchStatus",
+      "description": "Was any FINISHED_PRODUCT evidence found for this claim?"
+    },
+    "evidence_links": {
+      "items": {
+        "$ref": "#/$defs/ClaimEvidenceLink"
+      },
+      "title": "Evidence Links",
+      "type": "array"
+    },
+    "official_material_mentions_claim": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Does the official label/site make the same claim?",
+      "title": "Official Material Mentions Claim"
+    },
+    "official_material_finding_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Official Material Finding Ids",
+      "type": "array"
+    },
+    "queries_tried": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Queries Tried",
+      "type": "array"
+    },
+    "notes": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Notes"
+    }
+  },
+  "required": [
+    "claim_id",
+    "claim_text_original",
+    "claim_type",
+    "status",
+    "finished_product_status"
+  ],
+  "title": "ClaimResearch",
+  "type": "object"
+}
