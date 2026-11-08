@@ -337,3 +337,5 @@ This repository already contains the initial SuppleScope project scaffold, inclu
 - future-model status card clearly marked as not integrated
 
 The current project is intentionally designed to keep the custom AI verification model outside the active implementation scope while enabling the full research and evidence-gathering workflow.
+
+# SuppleScope
