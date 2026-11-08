@@ -92,6 +92,7 @@ def main() -> None:
     out.mkdir(parents=True, exist_ok=True)
 
     rows, review = [], []
+    failed: list[dict] = []
     for g in gold:
         ad_id = g["id"]
         print(f"== {ad_id}", flush=True)
@@ -106,7 +107,12 @@ def main() -> None:
         doc = ocr_document_from_text(ad_id, text, provider="tesseract" if args.text_source == "ocr" else "gold_transcript")
         t0 = time.time()
         if args.extractor == "grounded_llm":
-            ad = GroundedExtractor(llm).run(doc).extraction
+            try:
+                ad = GroundedExtractor(llm).run(doc).extraction
+            except Exception as exc:  # keep going with the other ads; record the failure
+                print(f"   extraction failed: {str(exc)[:300]}", flush=True)
+                failed.append({"ad": ad_id, "error": f"extraction: {str(exc)[:300]}"})
+                continue
         else:
             ad = baseline_to_ad_extraction(doc, extract_from_text(ocr_text=text))
         (out / f"{ad_id}_ad_extraction.json").write_text(ad.model_dump_json(indent=2), encoding="utf-8")
@@ -145,7 +151,7 @@ def main() -> None:
             w = csv.DictWriter(fh, fieldnames=list(review[0]))
             w.writeheader()
             w.writerows(review)
-    report = render_report(rows, args)
+    report = render_report(rows, args, failed)
     (out / "report.md").write_text(report, encoding="utf-8")
     (out / "rows.json").write_text(json.dumps(rows, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
     print(report)
@@ -195,7 +201,7 @@ def score_research(d: ResearchDossierV2, rg: dict) -> dict:
     return out
 
 
-def render_report(rows: list[dict], args) -> str:
+def render_report(rows: list[dict], args, failed: list[dict] | None = None) -> str:
     def mean(xs):
         xs = [x for x in xs if x is not None]
         return sum(xs) / len(xs) if xs else float("nan")
@@ -235,9 +241,10 @@ def render_report(rows: list[dict], args) -> str:
                   f"- Composition entries built from unverified findings (should be 0): {sum(r['composition_from_unverified'] for r in res)}",
                   f"- Status counts: {dict(Counter(r['identity_status'] for r in res))}",
                   "- Unsupported-fact rate among KEPT findings: mark findings_review.csv by hand, then count 'n'.", ""]
-    errors = [r for r in rows if r.get("research_error")]
+    errors = [f"- {r['ad']}: research: {r['research_error']}" for r in rows if r.get("research_error")]
+    errors += [f"- {f['ad']}: {f['error']}" for f in failed or []]
     if errors:
-        lines += ["## Errors", ""] + [f"- {r['ad']}: {r['research_error']}" for r in errors]
+        lines += ["## Errors", "", "Re-run just these ads later with --only <ad id>.", ""] + errors
     return "\n".join(lines) + "\n"
 
 

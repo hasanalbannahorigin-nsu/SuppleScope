@@ -125,6 +125,27 @@ class OpenAICompatibleLlm:
             time.sleep(self.min_interval - gap)
         self._last = time.monotonic()
 
+    # Free-tier Gemini often answers 503 "high demand" or 429 "quota" for a while.
+    # Wait and try again (15s, 30s, 60s, 120s) instead of failing the whole run.
+    BUSY_STATUS = (429, 500, 502, 503, 504)
+    BUSY_WAITS = (15, 30, 60, 120)
+
+    def _create(self, messages: list[dict]):
+        for wait in (*self.BUSY_WAITS, None):
+            try:
+                return self.client.chat.completions.create(
+                    model=self.model, messages=messages, temperature=0, response_format={"type": "json_object"},
+                )
+            except Exception as exc:
+                status = getattr(exc, "status_code", None)
+                if status not in self.BUSY_STATUS or wait is None:
+                    raise
+                logger.warning("LLM busy (HTTP %s); waiting %ss and retrying", status, wait)
+                print(f"   Gemini busy (HTTP {status}), waiting {wait}s and trying again...", flush=True)
+                time.sleep(wait)
+                self._last = time.monotonic()
+        raise LlmError("unreachable")
+
     def parse(self, system: str, user: str, schema: type[T], *, counter: CallCounter | None = None) -> T:
         schema_json = json.dumps(schema.model_json_schema(), ensure_ascii=False)
         messages = [
@@ -135,9 +156,7 @@ class OpenAICompatibleLlm:
             if counter is not None:
                 counter.charge_llm()
             self._wait()
-            response = self.client.chat.completions.create(
-                model=self.model, messages=messages, temperature=0, response_format={"type": "json_object"},
-            )
+            response = self._create(messages)
             content = _strip_fences(response.choices[0].message.content or "")
             try:
                 return schema.model_validate_json(content)
