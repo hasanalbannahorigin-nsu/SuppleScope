@@ -1,0 +1,694 @@
+{
+  "$defs": {
+    "BrandManufacturer": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/ResearchStatus"
+        },
+        "brand_finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Brand Finding Ids",
+          "type": "array"
+        },
+        "manufacturer_finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Manufacturer Finding Ids",
+          "type": "array"
+        },
+        "official_website": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Official Website"
+        },
+        "official_website_source_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Official Website Source Id"
+        },
+        "country": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Country"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "BrandManufacturer",
+      "type": "object"
+    },
+    "ComposedIngredient": {
+      "additionalProperties": false,
+      "properties": {
+        "ingredient_id": {
+          "description": "e.g. 'ing_01'; used by IngredientResearch and ClaimResearch",
+          "title": "Ingredient Id",
+          "type": "string"
+        },
+        "name": {
+          "description": "As on the official/third-party source",
+          "title": "Name",
+          "type": "string"
+        },
+        "standardized_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Searchable English name, e.g. 'Gymnema sylvestre leaf extract'",
+          "title": "Standardized Name"
+        },
+        "amount": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Amount"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "per": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "'per capsule', 'per 10 ml' ...",
+          "title": "Per"
+        },
+        "information_class": {
+          "description": "InformationClass of the best finding for this ingredient",
+          "title": "Information Class",
+          "type": "string"
+        },
+        "finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Finding Ids",
+          "type": "array"
+        },
+        "ad_mention_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "AdIngredient.mention_id if the ad also shows it",
+          "title": "Ad Mention Id"
+        }
+      },
+      "required": [
+        "ingredient_id",
+        "name",
+        "information_class",
+        "finding_ids"
+      ],
+      "title": "ComposedIngredient",
+      "type": "object"
+    },
+    "Composition": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/ResearchStatus"
+        },
+        "ingredients": {
+          "items": {
+            "$ref": "#/$defs/ComposedIngredient"
+          },
+          "title": "Ingredients",
+          "type": "array"
+        },
+        "serving_size_finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Serving Size Finding Ids",
+          "type": "array"
+        },
+        "dosage_directions_finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Dosage Directions Finding Ids",
+          "type": "array"
+        },
+        "intended_purpose_finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Intended Purpose Finding Ids",
+          "type": "array"
+        },
+        "manufacturer_description_finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Manufacturer Description Finding Ids",
+          "type": "array"
+        },
+        "label_warning_finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Label Warning Finding Ids",
+          "type": "array"
+        },
+        "label_source_ids": {
+          "description": "Official label / insert sources used",
+          "items": {
+            "type": "string"
+          },
+          "title": "Label Source Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "Composition",
+      "type": "object"
+    },
+    "Discrepancy": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/DiscrepancyKind"
+        },
+        "ad_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "AdExtraction path, e.g. 'ingredients[0]' or 'claims[c03]'",
+          "title": "Ad Ref"
+        },
+        "finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Finding Ids",
+          "type": "array"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "description"
+      ],
+      "title": "Discrepancy",
+      "type": "object"
+    },
+    "DiscrepancyKind": {
+      "enum": [
+        "INGREDIENT_IN_AD_NOT_IN_OFFICIAL",
+        "INGREDIENT_IN_OFFICIAL_NOT_IN_AD",
+        "AMOUNT_MISMATCH",
+        "DOSAGE_MISMATCH",
+        "NAME_OR_BRAND_MISMATCH",
+        "CLAIM_NOT_IN_OFFICIAL_MATERIAL",
+        "WARNING_IN_OFFICIAL_NOT_IN_AD"
+      ],
+      "title": "DiscrepancyKind",
+      "type": "string"
+    },
+    "FinishedProductResearch": {
+      "additionalProperties": false,
+      "description": "Studies on the exact finished product. Never filled from ingredient studies.",
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/ResearchStatus"
+        },
+        "evidence_ids": {
+          "description": "EvidenceRecords with scope FINISHED_PRODUCT",
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "manufacturer_claimed_studies": {
+          "description": "finding_ids where the manufacturer cites a study that was not independently found",
+          "items": {
+            "type": "string"
+          },
+          "title": "Manufacturer Claimed Studies",
+          "type": "array"
+        },
+        "queries_tried": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Queries Tried",
+          "type": "array"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "FinishedProductResearch",
+      "type": "object"
+    },
+    "IdentityStatus": {
+      "enum": [
+        "VERIFIED",
+        "PROBABLE",
+        "IDENTITY_UNCERTAIN",
+        "NOT_FOUND"
+      ],
+      "title": "IdentityStatus",
+      "type": "string"
+    },
+    "MatchScores": {
+      "additionalProperties": false,
+      "description": "0..1 per criterion; None when the ad gives nothing to compare.",
+      "properties": {
+        "name": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "brand": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Brand"
+        },
+        "manufacturer": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Manufacturer"
+        },
+        "ingredient_overlap": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ingredient Overlap"
+        },
+        "form_and_pack": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Form And Pack"
+        },
+        "country": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Country"
+        }
+      },
+      "title": "MatchScores",
+      "type": "object"
+    },
+    "ProductCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_id": {
+          "description": "e.g. 'prod_c1'",
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "brand": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Brand"
+        },
+        "manufacturer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Manufacturer"
+        },
+        "country": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Country"
+        },
+        "form": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "capsule, tablet, powder, syrup ...",
+          "title": "Form"
+        },
+        "source_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        },
+        "match_scores": {
+          "$ref": "#/$defs/MatchScores"
+        },
+        "overall_score": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Overall Score",
+          "type": "number"
+        },
+        "rejected_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Why this look-alike is not the advertised product",
+          "title": "Rejected Reason"
+        }
+      },
+      "required": [
+        "candidate_id",
+        "name",
+        "source_ids",
+        "match_scores",
+        "overall_score"
+      ],
+      "title": "ProductCandidate",
+      "type": "object"
+    },
+    "ProductIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/IdentityStatus"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "chosen_candidate_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Chosen Candidate Id"
+        },
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/ProductCandidate"
+          },
+          "title": "Candidates",
+          "type": "array"
+        },
+        "reasoning": {
+          "description": "Which evidence decided identity, in plain words",
+          "title": "Reasoning",
+          "type": "string"
+        },
+        "queries_tried": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Queries Tried",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status",
+        "confidence",
+        "reasoning"
+      ],
+      "title": "ProductIdentity",
+      "type": "object"
+    },
+    "RegulatoryRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "authority": {
+          "description": "e.g. 'DGDA (Bangladesh)', 'BSTI', 'FDA'",
+          "title": "Authority",
+          "type": "string"
+        },
+        "registration_number": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Registration Number"
+        },
+        "category": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "e.g. 'Ayurvedic', 'Unani', 'food supplement'",
+          "title": "Category"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status"
+        },
+        "finding_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Finding Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "authority",
+        "finding_ids"
+      ],
+      "title": "RegulatoryRecord",
+      "type": "object"
+    },
+    "ResearchStatus": {
+      "description": "Outcome of a research question. Absence of evidence is never 'false'.",
+      "enum": [
+        "FOUND",
+        "PARTIAL",
+        "NOT_FOUND",
+        "IDENTITY_UNCERTAIN",
+        "NO_RELEVANT_STUDY_FOUND",
+        "CONFLICTING",
+        "NOT_SEARCHED"
+      ],
+      "title": "ResearchStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "identity": {
+      "$ref": "#/$defs/ProductIdentity"
+    },
+    "brand_manufacturer": {
+      "$ref": "#/$defs/BrandManufacturer"
+    },
+    "composition": {
+      "$ref": "#/$defs/Composition"
+    },
+    "regulatory": {
+      "items": {
+        "$ref": "#/$defs/RegulatoryRecord"
+      },
+      "title": "Regulatory",
+      "type": "array"
+    },
+    "ad_vs_official": {
+      "items": {
+        "$ref": "#/$defs/Discrepancy"
+      },
+      "title": "Ad Vs Official",
+      "type": "array"
+    },
+    "finished_product": {
+      "$ref": "#/$defs/FinishedProductResearch"
+    }
+  },
+  "required": [
+    "identity",
+    "brand_manufacturer",
+    "composition",
+    "finished_product"
+  ],
+  "title": "ProductResearch",
+  "type": "object"
+}

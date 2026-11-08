@@ -1,0 +1,226 @@
+{
+  "$defs": {
+    "BBox": {
+      "additionalProperties": false,
+      "properties": {
+        "x": {
+          "title": "X",
+          "type": "integer"
+        },
+        "y": {
+          "title": "Y",
+          "type": "integer"
+        },
+        "width": {
+          "title": "Width",
+          "type": "integer"
+        },
+        "height": {
+          "title": "Height",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "width",
+        "height"
+      ],
+      "title": "BBox",
+      "type": "object"
+    },
+    "OcrLine": {
+      "additionalProperties": false,
+      "properties": {
+        "line_id": {
+          "description": "e.g. 'seg01_l004'",
+          "title": "Line Id",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        },
+        "bbox": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BBox"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "line_id",
+        "text"
+      ],
+      "title": "OcrLine",
+      "type": "object"
+    },
+    "OcrSegment": {
+      "additionalProperties": false,
+      "properties": {
+        "segment_id": {
+          "description": "e.g. 'seg01'",
+          "title": "Segment Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/SegmentKind"
+        },
+        "frame_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Frame Id"
+        },
+        "start_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Frame timestamp, or speech segment start",
+          "title": "Start Ms"
+        },
+        "end_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Ms"
+        },
+        "provider": {
+          "description": "'tesseract', 'google_vision', 'faster_whisper', ...",
+          "title": "Provider",
+          "type": "string"
+        },
+        "raw_text": {
+          "title": "Raw Text",
+          "type": "string"
+        },
+        "cleaned_text": {
+          "description": "Unicode-normalised only; numbers, units, negations and qualifiers untouched",
+          "title": "Cleaned Text",
+          "type": "string"
+        },
+        "average_confidence": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Average Confidence"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/$defs/OcrLine"
+          },
+          "title": "Lines",
+          "type": "array"
+        }
+      },
+      "required": [
+        "segment_id",
+        "kind",
+        "provider",
+        "raw_text",
+        "cleaned_text"
+      ],
+      "title": "OcrSegment",
+      "type": "object"
+    },
+    "SegmentKind": {
+      "enum": [
+        "IMAGE",
+        "VIDEO_FRAME",
+        "SPEECH"
+      ],
+      "title": "SegmentKind",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "default": "2.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "ad_id": {
+      "title": "Ad Id",
+      "type": "string"
+    },
+    "media_type": {
+      "description": "'image' or 'video'",
+      "title": "Media Type",
+      "type": "string"
+    },
+    "segments": {
+      "items": {
+        "$ref": "#/$defs/OcrSegment"
+      },
+      "title": "Segments",
+      "type": "array"
+    },
+    "full_text": {
+      "description": "cleaned_text of all segments in reading/time order, separated by blank lines",
+      "title": "Full Text",
+      "type": "string"
+    },
+    "providers_unavailable": {
+      "description": "'google_vision: not configured', ...",
+      "items": {
+        "type": "string"
+      },
+      "title": "Providers Unavailable",
+      "type": "array"
+    }
+  },
+  "required": [
+    "ad_id",
+    "media_type",
+    "segments",
+    "full_text"
+  ],
+  "title": "OcrDocument",
+  "type": "object"
+}

@@ -1,0 +1,97 @@
+{
+  "schema_version": "2.0.0",
+  "dossier_id": "dos_example_001",
+  "ad_id": "ad_example_001",
+  "created_at": "2026-11-08T19:00:00Z",
+  "agent": {"agent_version": "0.1.0-example", "llm_provider": "gemini", "llm_model": "gemini-flash-lite-latest", "search_provider": "duckduckgo", "literature_providers": ["pubmed", "europepmc", "clinicaltrials"]},
+  "budget": {"max_search_calls": 40, "max_fetches": 30, "max_llm_calls": 60, "max_retries_per_call": 2, "max_seconds": 600, "used_search_calls": 12, "used_fetches": 9, "used_llm_calls": 21, "elapsed_seconds": 184.2, "exhausted": false},
+  "advertisement": {
+    "schema_version": "2.0.0",
+    "ad_id": "ad_example_001",
+    "extractor": {"name": "grounded_llm", "version": "0.1.0", "model": "gemini-flash-lite-latest"},
+    "product_name": {"value": "DIBEDEX", "span": {"text": "নিয়ম অনুযায়ী DIBEDEX সেবনের ফলে", "segment_id": "seg01", "line_ids": ["seg01_l017"]}},
+    "brand": null,
+    "manufacturer": {},
+    "ingredients": [],
+    "claims": [
+      {"claim_id": "c01", "text_original": "সুগার লেভেল নিয়ন্ত্রণে বিশেষ ভূমিকা পালন করে", "text_en": "plays a special role in controlling sugar level", "claim_type": "TREATMENT", "target": "ডায়াবেটিস", "target_en": "diabetes", "qualifiers": ["সকল ধরনের ডায়াবেটিক রোগীদের"], "negated": false, "span": {"text": "সুগার লেভেল নিযন্ত্রগে বিশেষ ভূমিকা পালন করে", "segment_id": "seg01", "line_ids": ["seg01_l016"]}},
+      {"claim_id": "c02", "text_original": "ইনসুলিন গ্রহণের প্রয়োজন হবে না", "text_en": "you will not need to take insulin", "claim_type": "REPLACEMENT", "target": "ইনসুলিন", "target_en": "insulin", "qualifiers": ["এক সময়"], "negated": false, "span": {"text": "ইনসুলিন প্রহণের প্রয়োজন হবে না", "segment_id": "seg01", "line_ids": ["seg01_l019"]}}
+    ],
+    "usage": [],
+    "warnings": [{"value": "প্রয়োজনে বিশেষজ্ঞের পরামর্শ নিন", "span": {"text": "প্রয়োজনে বিশেষজজ্ঞর পরামর্শ নিন", "segment_id": "seg01", "line_ids": ["seg01_l023"]}}],
+    "other_text": [{"value": "01758072775", "span": {"text": "01758072775", "segment_id": "seg01", "line_ids": ["seg01_l021"]}}],
+    "unreadable": ["viz", "SF হ্যালো"],
+    "rejected": []
+  },
+  "product": {
+    "identity": {
+      "status": "PROBABLE",
+      "confidence": 0.7,
+      "chosen_candidate_id": "prod_c1",
+      "candidates": [
+        {"candidate_id": "prod_c1", "name": "EXAMPLE PRODUCT NAME", "brand": "EXAMPLE BRAND", "manufacturer": "EXAMPLE MANUFACTURER", "country": "Bangladesh", "form": "capsule", "source_ids": ["src_001"], "match_scores": {"name": 1.0, "brand": null, "manufacturer": null, "ingredient_overlap": null, "form_and_pack": 0.8, "country": 1.0}, "overall_score": 0.7},
+        {"candidate_id": "prod_c2", "name": "EXAMPLE LOOK-ALIKE", "brand": "OTHER BRAND", "manufacturer": null, "country": "India", "form": "tablet", "source_ids": ["src_002"], "match_scores": {"name": 0.6, "brand": null, "manufacturer": null, "ingredient_overlap": null, "form_and_pack": 0.2, "country": 0.0}, "overall_score": 0.3, "rejected_reason": "Different spelling, different country and dosage form."}
+      ],
+      "reasoning": "EXAMPLE: name and pack match a retail listing; no official manufacturer page found, so not VERIFIED.",
+      "queries_tried": ["DIBEDEX", "ডায়বিডেক্স", "DIBEDEX ayurvedic capsule Bangladesh"]
+    },
+    "brand_manufacturer": {"status": "NOT_FOUND", "brand_finding_ids": [], "manufacturer_finding_ids": []},
+    "composition": {
+      "status": "PARTIAL",
+      "ingredients": [
+        {"ingredient_id": "ing_01", "name": "Example Ingredient A", "standardized_name": "Example ingredient A extract", "amount": "250", "unit": "mg", "per": "per capsule", "information_class": "THIRD_PARTY", "finding_ids": ["f_001"]}
+      ],
+      "label_source_ids": []
+    },
+    "regulatory": [],
+    "ad_vs_official": [
+      {"kind": "CLAIM_NOT_IN_OFFICIAL_MATERIAL", "ad_ref": "claims[c02]", "finding_ids": [], "description": "EXAMPLE: the insulin claim does not appear in the retail listing."}
+    ],
+    "finished_product": {"status": "NO_RELEVANT_STUDY_FOUND", "evidence_ids": [], "queries_tried": ["\"DIBEDEX\"[All Fields]"]}
+  },
+  "ingredients": [
+    {
+      "ingredient_id": "ing_01", "name": "Example Ingredient A", "standardized_name": "Example ingredient A extract", "synonyms": [], "origin": "THIRD_PARTY_ONLY", "status": "FOUND",
+      "effects": [{"effect": "EXAMPLE: fasting blood glucose", "evidence_ids": ["ev_001"], "summary": "EXAMPLE: one small RCT reports a reduction versus placebo."}],
+      "evidence_ids": ["ev_001"],
+      "tested_dose_range": "EXAMPLE: 400 mg/day",
+      "safety": {"status": "PARTIAL", "drug_interactions": [{"drug_or_class": "insulin", "description": "EXAMPLE: additive glucose-lowering effect reported.", "evidence_ids": ["ev_001"]}]},
+      "queries_tried": ["\"example ingredient A\" AND glucose"]
+    }
+  ],
+  "claims": [
+    {
+      "claim_id": "c01", "claim_text_original": "সুগার লেভেল নিয়ন্ত্রণে বিশেষ ভূমিকা পালন করে", "claim_text_en": "plays a special role in controlling sugar level", "claim_type": "TREATMENT", "target": "ডায়াবেটিস", "qualifiers": ["সকল ধরনের ডায়াবেটিক রোগীদের"],
+      "linked_ingredient_ids": ["ing_01"], "research_questions": ["Does example ingredient A lower blood glucose in people with diabetes?"],
+      "status": "FOUND", "finished_product_status": "NO_RELEVANT_STUDY_FOUND",
+      "evidence_links": [{"evidence_id": "ev_001", "scope": "INGREDIENT", "ingredient_id": "ing_01", "relation": "SUPPORTS", "match": {"outcome": "SIMILAR", "population": "SIMILAR", "dose": "DIFFERENT", "intervention": "SIMILAR", "qualifiers": "DIFFERENT", "human_evidence": true, "notes": "EXAMPLE: type 2 only, not 'all types'; higher dose than the product."}, "relevant_passage": "EXAMPLE passage from the abstract."}],
+      "official_material_mentions_claim": null
+    },
+    {
+      "claim_id": "c02", "claim_text_original": "ইনসুলিন গ্রহণের প্রয়োজন হবে না", "claim_text_en": "you will not need to take insulin", "claim_type": "REPLACEMENT", "target": "ইনসুলিন", "qualifiers": ["এক সময়"],
+      "linked_ingredient_ids": ["ing_01"], "research_questions": ["Can example ingredient A replace insulin therapy?"],
+      "status": "NO_RELEVANT_STUDY_FOUND", "finished_product_status": "NO_RELEVANT_STUDY_FOUND", "evidence_links": [], "official_material_mentions_claim": false
+    }
+  ],
+  "safety": {"ingredient_ids_with_interactions": ["ing_01"]},
+  "sources": [
+    {"source_id": "src_001", "source_type": "THIRD_PARTY_RETAIL", "url": "https://example.org/retail/example-product", "title": "EXAMPLE retail listing", "retrieved_at": "2026-11-08T18:55:00Z", "retrieved_by_tool": "fetch_page", "reliability_rank": 6},
+    {"source_id": "src_002", "source_type": "THIRD_PARTY_RETAIL", "url": "https://example.org/retail/look-alike", "title": "EXAMPLE look-alike listing", "retrieved_at": "2026-11-08T18:55:30Z", "retrieved_by_tool": "fetch_page", "reliability_rank": 6},
+    {"source_id": "src_003", "source_type": "SCIENTIFIC_LITERATURE", "url": "https://pubmed.ncbi.nlm.nih.gov/00000000/", "pmid": "00000000", "doi": "10.0000/example.0000", "title": "EXAMPLE trial title", "journal": "Example Journal", "publication_year": 2020, "authors": ["Example A", "Example B"], "retrieved_at": "2026-11-08T18:57:00Z", "retrieved_by_tool": "pubmed_efetch", "reliability_rank": 3}
+  ],
+  "findings": [
+    {"finding_id": "f_001", "field": "ingredient", "value": "Example Ingredient A", "unit": null, "subject_id": "prod_c1", "source_id": "src_001", "passage": "EXAMPLE: Each capsule contains Example Ingredient A 250 mg", "information_class": "THIRD_PARTY", "validation": {"quote_in_source": true, "value_in_passage": true, "refers_to_product": true, "passage_supports_finding": true, "checked_by": "rule"}}
+  ],
+  "evidence": [
+    {"evidence_id": "ev_001", "scope": "INGREDIENT", "subject_id": "ing_01", "subject_name": "Example Ingredient A", "source_id": "src_003", "study_type": "RCT", "human_study": true, "population": "EXAMPLE: adults with type 2 diabetes", "sample_size": 60, "intervention": "EXAMPLE extract", "dose": "400 mg/day", "duration": "12 weeks", "comparator": "placebo", "outcomes": ["fasting plasma glucose"], "result_summary": "EXAMPLE: modest reduction vs placebo.", "limitations": ["small sample", "single centre"], "passage": "EXAMPLE abstract excerpt.", "abstract_available": true, "validation": {"quote_in_source": true, "value_in_passage": true, "refers_to_product": null, "passage_supports_finding": true, "checked_by": "gemini-flash-lite-latest"}}
+  ],
+  "conflicts": [],
+  "missing_information": [
+    {"item": "official label", "phase": "official_sources", "status": "NOT_FOUND", "queries_tried": ["DIBEDEX label", "DIBEDEX ingredients"], "reason": "EXAMPLE: no manufacturer site found."},
+    {"item": "studies on the finished product", "phase": "finished_product", "status": "NO_RELEVANT_STUDY_FOUND", "queries_tried": ["\"DIBEDEX\"[All Fields]"]}
+  ],
+  "uncertainties": ["EXAMPLE: identity is PROBABLE, not VERIFIED; composition comes from one retail listing."],
+  "research_log": [
+    {"step": 1, "phase": "identity", "action": "search", "tool": "web_search:duckduckgo", "query": "DIBEDEX", "result_count": 8, "produced_ids": [], "at": "2026-11-08T18:54:00Z"}
+  ]
+}

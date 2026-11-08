@@ -1,0 +1,506 @@
+{
+  "$defs": {
+    "AdClaim": {
+      "additionalProperties": false,
+      "properties": {
+        "claim_id": {
+          "description": "e.g. 'c01'; stable across the pipeline",
+          "title": "Claim Id",
+          "type": "string"
+        },
+        "text_original": {
+          "description": "One atomic claim (one effect on one target), ad wording",
+          "title": "Text Original",
+          "type": "string"
+        },
+        "text_en": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "English translation for search; not used as evidence",
+          "title": "Text En"
+        },
+        "claim_type": {
+          "$ref": "#/$defs/ClaimType"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Condition or body function, e.g. 'ডায়াবেটিস'",
+          "title": "Target"
+        },
+        "target_en": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target En"
+        },
+        "qualifiers": {
+          "description": "Time frames, magnitudes, absolutes: '৭ দিনে', 'চিরতরে', '১০০%'",
+          "items": {
+            "type": "string"
+          },
+          "title": "Qualifiers",
+          "type": "array"
+        },
+        "negated": {
+          "default": false,
+          "title": "Negated",
+          "type": "boolean"
+        },
+        "span": {
+          "$ref": "#/$defs/TextSpan"
+        }
+      },
+      "required": [
+        "claim_id",
+        "text_original",
+        "claim_type",
+        "span"
+      ],
+      "title": "AdClaim",
+      "type": "object"
+    },
+    "AdField": {
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "description": "As written in the ad (original script)",
+          "title": "Value",
+          "type": "string"
+        },
+        "span": {
+          "$ref": "#/$defs/TextSpan"
+        }
+      },
+      "required": [
+        "value",
+        "span"
+      ],
+      "title": "AdField",
+      "type": "object"
+    },
+    "AdIngredient": {
+      "additionalProperties": false,
+      "properties": {
+        "mention_id": {
+          "description": "e.g. 'ing_m01'",
+          "title": "Mention Id",
+          "type": "string"
+        },
+        "name_original": {
+          "description": "As written in the ad",
+          "title": "Name Original",
+          "type": "string"
+        },
+        "name_en": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "English rendering of the name for searching; a translation, not new information",
+          "title": "Name En"
+        },
+        "amount": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Only if shown in the ad, e.g. '৬০০ মি.গ্রা.'",
+          "title": "Amount"
+        },
+        "span": {
+          "$ref": "#/$defs/TextSpan"
+        }
+      },
+      "required": [
+        "mention_id",
+        "name_original",
+        "span"
+      ],
+      "title": "AdIngredient",
+      "type": "object"
+    },
+    "AdManufacturer": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AdField"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "address": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AdField"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "phone": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AdField"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "website": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AdField"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "AdManufacturer",
+      "type": "object"
+    },
+    "AdUsage": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "dose_amount": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dose Amount"
+        },
+        "dose_unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dose Unit"
+        },
+        "times_per_day": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Times Per Day"
+        },
+        "timing": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timing"
+        },
+        "duration": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration"
+        },
+        "population": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Population"
+        },
+        "span": {
+          "$ref": "#/$defs/TextSpan"
+        }
+      },
+      "required": [
+        "text",
+        "span"
+      ],
+      "title": "AdUsage",
+      "type": "object"
+    },
+    "ClaimType": {
+      "enum": [
+        "CURE",
+        "TREATMENT",
+        "PREVENTION",
+        "IMPROVEMENT",
+        "SAFETY",
+        "REPLACEMENT",
+        "OTHER"
+      ],
+      "title": "ClaimType",
+      "type": "string"
+    },
+    "ExtractorInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "description": "'grounded_llm', 'regex_baseline', later the custom model",
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "title": "ExtractorInfo",
+      "type": "object"
+    },
+    "RejectedItem": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "description": "e.g. 'claims[3]'",
+          "title": "Path",
+          "type": "string"
+        },
+        "problems": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Problems",
+          "type": "array"
+        },
+        "item": {
+          "title": "Item",
+          "type": "object"
+        }
+      },
+      "required": [
+        "path",
+        "problems",
+        "item"
+      ],
+      "title": "RejectedItem",
+      "type": "object"
+    },
+    "TextSpan": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "description": "Verbatim span of the ad's OCR/transcript text",
+          "title": "Text",
+          "type": "string"
+        },
+        "segment_id": {
+          "title": "Segment Id",
+          "type": "string"
+        },
+        "line_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Line Ids",
+          "type": "array"
+        },
+        "start_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "For video frames / speech",
+          "title": "Start Ms"
+        }
+      },
+      "required": [
+        "text",
+        "segment_id"
+      ],
+      "title": "TextSpan",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "default": "2.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "ad_id": {
+      "title": "Ad Id",
+      "type": "string"
+    },
+    "extractor": {
+      "$ref": "#/$defs/ExtractorInfo"
+    },
+    "product_name": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AdField"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "brand": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AdField"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "manufacturer": {
+      "$ref": "#/$defs/AdManufacturer"
+    },
+    "ingredients": {
+      "items": {
+        "$ref": "#/$defs/AdIngredient"
+      },
+      "title": "Ingredients",
+      "type": "array"
+    },
+    "claims": {
+      "items": {
+        "$ref": "#/$defs/AdClaim"
+      },
+      "title": "Claims",
+      "type": "array"
+    },
+    "usage": {
+      "items": {
+        "$ref": "#/$defs/AdUsage"
+      },
+      "title": "Usage",
+      "type": "array"
+    },
+    "warnings": {
+      "items": {
+        "$ref": "#/$defs/AdField"
+      },
+      "title": "Warnings",
+      "type": "array"
+    },
+    "other_text": {
+      "description": "Prices, phone/order lines, slogans, certifications as printed",
+      "items": {
+        "$ref": "#/$defs/AdField"
+      },
+      "title": "Other Text",
+      "type": "array"
+    },
+    "unreadable": {
+      "description": "Fragments too garbled to interpret",
+      "items": {
+        "type": "string"
+      },
+      "title": "Unreadable",
+      "type": "array"
+    },
+    "rejected": {
+      "description": "Items dropped because their span was not found in the ad text",
+      "items": {
+        "$ref": "#/$defs/RejectedItem"
+      },
+      "title": "Rejected",
+      "type": "array"
+    }
+  },
+  "required": [
+    "ad_id",
+    "extractor"
+  ],
+  "title": "AdExtraction",
+  "type": "object"
+}
