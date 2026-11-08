@@ -50,7 +50,23 @@ class Settings(BaseSettings):
     ncbi_api_key: str = ""
     ncbi_email: str = "supplescope@example.edu"
 
+    # baseline | banglabert | grounded_llm (needs an LLM key; falls back to baseline without one)
     extraction_backend: str = "baseline"
+    # legacy = original research agent/scripted research; v2 = product-intelligence agent (schemas v2)
+    research_agent: str = "legacy"
+
+    # Research agent v2 limits (all configurable from .env)
+    research_max_search_calls: int = 30
+    research_max_fetches: int = 20
+    research_max_llm_calls: int = 40
+    research_max_retries_per_call: int = 2
+    research_max_seconds: int = 600
+    research_max_rounds: int = 3
+    research_fetch_max_chars: int = 60000
+    research_cache_dir: str = "./data/cache/research"
+    # Free LLM tiers limit requests per minute; wait this long between LLM calls.
+    llm_min_seconds_between_calls: float = 4.0
+    llm_timeout_seconds: float = 120.0
     banglabert_model_name: str = "csebuetnlp/banglabert"
 
     ffmpeg_path: str = "ffmpeg"

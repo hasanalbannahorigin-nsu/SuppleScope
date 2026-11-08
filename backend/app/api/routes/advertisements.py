@@ -12,6 +12,7 @@ from app.jobs.stages import ALL_STAGES, ANALYZE_STAGES, RESEARCH_STAGES, empty_s
 from app.models.advertisement import Advertisement
 from app.models.extraction import ExtractedClaim, ExtractedProduct, MentionedIngredient
 from app.models.media import ExtractedFrame, OcrResult, SpeechTranscript, UploadedFile
+from app.models.pipeline_v2 import AdExtractionRecord, ResearchDossierRecord
 from app.models.research import (
     DiseaseRiskResearch,
     InteractionResearch,
@@ -293,6 +294,59 @@ def extraction(
             for t in transcripts
         ],
     }
+
+
+@router.get("/{advertisement_id}/ad-extraction")
+def ad_extraction_v2(
+    advertisement_id: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """AdExtraction (schemas v2): only what the ad shows, with spans."""
+    ad = get_owned_advertisement(db, user, advertisement_id)
+    row = (db.query(AdExtractionRecord).filter_by(advertisement_id=ad.id)
+           .order_by(AdExtractionRecord.created_at.desc()).first())
+    if row is None:
+        raise HTTPException(status_code=404, detail="No v2 ad extraction yet; run analysis first")
+    return row.payload
+
+
+def _latest_dossier_v2(db: Session, ad_id: str) -> ResearchDossierRecord:
+    row = (db.query(ResearchDossierRecord).filter_by(advertisement_id=ad_id)
+           .order_by(ResearchDossierRecord.created_at.desc()).first())
+    if row is None:
+        raise HTTPException(status_code=404, detail="No v2 research dossier yet; set RESEARCH_AGENT=v2 and run research")
+    return row
+
+
+@router.get("/{advertisement_id}/dossier-v2")
+def research_dossier_v2(
+    advertisement_id: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """The complete ResearchDossierV2 written by the research agent (no verdicts)."""
+    ad = get_owned_advertisement(db, user, advertisement_id)
+    return _latest_dossier_v2(db, ad.id).payload
+
+
+@router.get("/{advertisement_id}/verifier-input.jsonl")
+def verifier_input_jsonl(
+    advertisement_id: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    """One VerifierInput per claim, as JSON Lines, for the separate custom Verification Model."""
+    import json
+
+    from app.schemas.research.dossier import ResearchDossierV2
+    from app.services.verification.handoff import build_verifier_inputs
+
+    ad = get_owned_advertisement(db, user, advertisement_id)
+    dossier = ResearchDossierV2.model_validate(_latest_dossier_v2(db, ad.id).payload)
+    body = "".join(json.dumps(r.model_dump(mode="json"), ensure_ascii=False) + "\n" for r in build_verifier_inputs(dossier))
+    return Response(content=body, media_type="application/x-ndjson",
+                    headers={"Content-Disposition": f'attachment; filename="verifier_input_{ad.id}.jsonl"'})
 
 
 @router.post("/{advertisement_id}/research")

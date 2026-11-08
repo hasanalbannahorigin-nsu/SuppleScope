@@ -1,0 +1,412 @@
+[
+  {
+    "id": "r01_saduri",
+    "image_file_hint": "r01_saduri",
+    "ad_gold": {
+      "product": "সিরাপ সাদুরী",
+      "ingredients": [
+        "যষ্টিমধু"
+      ],
+      "claims": [
+        "কাশি দূর করে",
+        "সর্দি-জ্বর দূর করে",
+        "এলার্জিজনিত কাশি দূর করে",
+        "কফ নিঃসারক হিসেবে কাজ করে",
+        "ফুসফুসে জমে থাকা কফ তরল করে বের করে",
+        "শ্বাসনালীর সংকোচন রোধ করে",
+        "ব্রংকাইটিস দূর করে",
+        "কন্ঠনালীর প্রদাহ দূর করে",
+        "নাকের আবদ্ধতা দূর করে"
+      ]
+    },
+    "transcript_lines": [
+      "সিরাপ সাদুরী এর",
+      "বহুমুখী কার্যকারিতা সমৃদ্ধ",
+      "উপাদান হল: যষ্টিমধু",
+      "যষ্টিমধু",
+      "কাশি, সর্দি-জ্বর দূর করে",
+      "এলার্জিজনিত কাশি দূর করে",
+      "কফ নিঃসারক হিসেবে কাজ করে",
+      "ফুসফুসে জমে থাকা কফ তরল",
+      "করে বের করে",
+      "শ্বাসনালীর সংকোচন রোধ করে",
+      "ব্রংকাইটিস, কন্ঠনালীর প্রদাহ ও",
+      "নাকের আবদ্ধতা দূর করে",
+      "২২৫ মিলি",
+      "১০০ মিলি",
+      "বাংলাদেশের সর্বত্র রয়েছে হামদর্দ হলিস্টিক চিকিৎসা ও বিক্রয় কেন্দ্র",
+      "হামদর্দ ল্যাবরেটরীজ (ওয়াকফ) বাংলাদেশ",
+      "সেবনবিধি",
+      "প্রাপ্ত বয়স্ক: ৪ চা চামচ (২০ মিলি) গরম পানিতে মিশিয়ে দৈনিক ২-৩ বার সেব্য।",
+      "অপ্রাপ্ত বয়স্ক: ১ চা চামচ (৫ মিলি) গরম পানিতে মিশিয়ে দৈনিক ২-৩ বার সেব্য।"
+    ],
+    "research_gold": {
+      "_status": "TO_FILL: check by hand on the web, then set checked_by",
+      "product_name": null,
+      "brand": null,
+      "manufacturer": null,
+      "official_website": null,
+      "official_source_exists": null,
+      "official_ingredients": [],
+      "acceptable_identity_statuses": [],
+      "notes": "Hamdard Saduri cough syrup. Dosage lines are small print; footer under it is too small to read and is left out.",
+      "checked_by": null
+    }
+  },
+  {
+    "id": "r02_centrum",
+    "image_file_hint": "r02_centrum",
+    "ad_gold": {
+      "product": "Centrum Silver Adults 50+",
+      "ingredients": [
+        "Vitamin D3",
+        "Calcium",
+        "Zinc",
+        "B Vitamins",
+        "Vitamin A",
+        "Vitamin C",
+        "Vitamin E",
+        "Lycopene",
+        "Lutein"
+      ],
+      "claims": [
+        "Clinically proven to support memory as you age",
+        "Supports heart health",
+        "Supports brain health",
+        "Supports eye health",
+        "হৃদযন্ত্রের স্বাস্থ্য ভালো রাখতে সহায়তা করে",
+        "মস্তিষ্কের কার্যক্ষমতা ও মনোযোগে সহায়তা করে",
+        "চোখের দৃষ্টি সুস্থ রাখতে সহায়তা করে",
+        "মজবুত হাড় গঠনে সহায়তা করে",
+        "রোগ প্রতিরোধ ক্ষমতা বাড়াতে সহায়তা করে",
+        "সক্রিয় ও এনার্জেটিক জীবনযাপনে সহায়তা করে"
+      ]
+    },
+    "transcript_lines": [
+      "৫০+ বয়সেও",
+      "সজীব থাকুন প্রতিদিন",
+      "সম্পূর্ণ পুষ্টি, সক্রিয় জীবন",
+      "ক্লান্ত লাগে",
+      "সহজেই হাঁপ ধরা",
+      "মনোযোগ কম",
+      "দুর্বল লাগে",
+      "দুর্বল হাড়",
+      "চোখে সমস্যা",
+      "ত্বক আগের মতো উজ্জ্বল নয়",
+      "সহজে ক্লান্ত",
+      "বেশি এনার্জি",
+      "ভালো মনোযোগ",
+      "সুস্থ হৃদযন্ত্র",
+      "সক্রিয় ও প্রাণবন্ত দৈনন্দিন জীবন",
+      "মজবুত হাড়",
+      "ভালো চোখের দৃষ্টি",
+      "উজ্জ্বল ও সুস্থ ত্বক",
+      "সক্রিয় ও আত্মবিশ্বাসী",
+      "CLINICALLY PROVEN TO SUPPORT MEMORY AS YOU AGE",
+      "Centrum",
+      "SILVER",
+      "ADULTS 50+",
+      "COMPLETE MULTIVITAMIN",
+      "Supports heart, brain, eye",
+      "+ whole body health",
+      "125 Tablets",
+      "Multivitamin/Multimineral Supplement",
+      "This statement has not been evaluated by the Food and Drug Administration.",
+      "This product is not intended to diagnose, treat, cure or prevent any disease.",
+      "Vitamin D3",
+      "Calcium",
+      "Zinc",
+      "B Vitamins",
+      "Vitamin A",
+      "Vitamin C",
+      "Vitamin E",
+      "Lycopene",
+      "Lutein",
+      "হৃদযন্ত্রের স্বাস্থ্য ভালো রাখতে সহায়তা করে",
+      "মস্তিষ্কের কার্যক্ষমতা ও মনোযোগে সহায়তা করে",
+      "চোখের দৃষ্টি সুস্থ রাখতে সহায়তা করে",
+      "মজবুত হাড় গঠনে সহায়তা করে",
+      "রোগ প্রতিরোধ ক্ষমতা বাড়াতে সহায়তা করে",
+      "সক্রিয় ও এনার্জেটিক জীবনযাপনে সহায়তা করে"
+    ],
+    "research_gold": {
+      "_status": "TO_FILL: check by hand on the web, then set checked_by",
+      "product_name": null,
+      "brand": null,
+      "manufacturer": null,
+      "official_website": null,
+      "official_source_exists": null,
+      "official_ingredients": [],
+      "acceptable_identity_statuses": [],
+      "notes": "Centrum Silver 50+. Before/after panels list symptoms and outcomes; only the explicit 'helps with' claims are gold claims.",
+      "checked_by": null
+    }
+  },
+  {
+    "id": "r03_dibedex",
+    "image_file_hint": "r03_dibedex",
+    "ad_gold": {
+      "product": "ডায়বিডেক্স",
+      "ingredients": [
+        "সিজিয়াম"
+      ],
+      "claims": [
+        "রোগ প্রতিরোধ ক্ষমতা বৃদ্ধি করে",
+        "ইমিউন সিস্টেমকে শক্তিশালী করে",
+        "হৃদযন্ত্রের কার্যকারিতা স্বাভাবিক রাখতে সহায়ক",
+        "শরীরকে ডিটক্স করে",
+        "সকল ধরনের ডায়াবেটিক রোগীদের সুগার লেভেল নিয়ন্ত্রণে বিশেষ ভূমিকা পালন করে",
+        "ডায়াবেটিসের জন্য কোন ঔষধ অথবা ইনসুলিন গ্রহণের প্রয়োজন হবে না",
+        "নিরাপদ ও কার্যকর",
+        "কেমিক্যাল মুক্ত"
+      ]
+    },
+    "transcript_lines": [
+      "প্রাকৃতিক সমাধানে",
+      "ডায়বিডেক্স",
+      "স্বাস্থ্য সুরক্ষায় আয়ুর্বেদিক শক্তি",
+      "রোগ প্রতিরোধ ক্ষমতা বৃদ্ধি করে",
+      "ইমিউন সিস্টেমকে শক্তিশালী করে",
+      "হৃদযন্ত্রের কার্যকারিতা",
+      "স্বাভাবিক রাখতে সহায়ক",
+      "শরীরকে ডিটক্স ও সুস্থ রাখতে",
+      "সহায়তা করে",
+      "1. ইহা সকল ধরনের ডায়াবেটিক রোগীদের",
+      "সুগার লেভেল নিয়ন্ত্রণে বিশেষ ভূমিকা পালন করে।",
+      "2. নিয়ম অনুযায়ী DIBEDEX সেবনের ফলে এক সময়",
+      "ডায়াবেটিসের জন্য আপনার কোন ঔষধ অথবা",
+      "ইনসুলিন গ্রহণের প্রয়োজন হবে না।",
+      "হ্যালো মেডিসিন ২৪",
+      "প্রাকৃতিক উপাদান",
+      "নিরাপদ ও কার্যকর",
+      "৩০ ক্যাপসুল",
+      "সিজিয়াম ৫০০ মি.গ্রা.",
+      "আয়ুর্বেদিক ঔষধ",
+      "অর্ডার করতে কল করুন",
+      "আয়ুর্বেদিক ফর্মুলা",
+      "কেমিক্যাল মুক্ত",
+      "আমাদের সাথে যুক্ত থাকুন",
+      "বি:দ্র: এটি একটি আয়ুর্বেদিক ঔষধ। নিয়মিত সেবন ও সুষম খাদ্যাভ্যাস বজায় রাখুন। প্রয়োজনে বিশেষজ্ঞের পরামর্শ নিন।"
+    ],
+    "research_gold": {
+      "_status": "TO_FILL: check by hand on the web, then set checked_by",
+      "product_name": null,
+      "brand": null,
+      "manufacturer": null,
+      "official_website": null,
+      "official_source_exists": null,
+      "official_ingredients": [],
+      "acceptable_identity_statuses": [],
+      "notes": "Dibedex (Syzygium) ayurvedic diabetes capsule. Phone number left out of the transcript.",
+      "checked_by": null
+    }
+  },
+  {
+    "id": "r04_slimming",
+    "image_file_hint": "r04_slimming",
+    "ad_gold": {
+      "product": "Super Slimming Herb",
+      "ingredients": [],
+      "claims": [
+        "প্রাকৃতিক উপায়ে ওজন কমায়",
+        "১০০% ন্যাচারাল",
+        "কোন পার্শ্বপ্রতিক্রিয়া নেই",
+        "দ্রুত ফ্যাট বার্ন করে",
+        "শরীর ডিটক্স করে",
+        "GMP সার্টিফাইড ও নিরাপদ"
+      ]
+    },
+    "transcript_lines": [
+      "ওজন কমান",
+      "প্রাকৃতিক উপায়ে!",
+      "১০০% ন্যাচারাল, কোন পার্শ্বপ্রতিক্রিয়া নেই।",
+      "Super Slimming Herb",
+      "দ্রুত ফ্যাট বার্ন",
+      "শরীর ডিটক্স করে",
+      "GMP সার্টিফাইড",
+      "ও নিরাপদ",
+      "এখনই অর্ডার করুন",
+      "সারা দেশে",
+      "হোম ডেলিভারি"
+    ],
+    "research_gold": {
+      "_status": "TO_FILL: check by hand on the web, then set checked_by",
+      "product_name": null,
+      "brand": null,
+      "manufacturer": null,
+      "official_website": null,
+      "official_source_exists": null,
+      "official_ingredients": [],
+      "acceptable_identity_statuses": [],
+      "notes": "Super Slimming Herb. Thai text on the box is left out.",
+      "checked_by": null
+    }
+  },
+  {
+    "id": "r05_weightgain",
+    "image_file_hint": "r05_weightgain",
+    "ad_gold": {
+      "product": "Healthy Plus",
+      "ingredients": [],
+      "claims": [
+        "৭ দিনে ওজন বাড়ায়",
+        "শক্তি বাড়ায়",
+        "শরীর গঠনে সাহায্য করে",
+        "শরীরের ঘাটতি পূরণ করে",
+        "শুধু ৭ দিনের মধ্যে ফলাফল",
+        "শক্তি ও স্ট্যামিনা বাড়ায়",
+        "দৈনিক কাজের সক্ষমতা বৃদ্ধি করে",
+        "রোগ প্রতিরোধ ক্ষমতা বাড়ায়",
+        "সহজে হজমযোগ্য",
+        "রুচি বাড়ায়",
+        "সুস্থ ও সবল করে",
+        "100% natural and safe"
+      ]
+    },
+    "transcript_lines": [
+      "৭ দিনে",
+      "ওজন বাড়ান!",
+      "হেলদি উপায়ে • শক্তি বাড়ায় • শরীর গঠনে সাহায্য করে",
+      "পুষ্টি সমৃদ্ধ",
+      "শরীরের ঘাটতি পূরণ করে",
+      "দ্রুত ওজন বৃদ্ধি",
+      "শুধু ৭ দিনের মধ্যে ফলাফল",
+      "শক্তি ও স্ট্যামিনা বাড়ায়",
+      "দৈনিক কাজের সক্ষমতা বৃদ্ধি করে",
+      "ইমিউনিটি সাপোর্ট",
+      "রোগ প্রতিরোধ ক্ষমতা বাড়ায়",
+      "সহজে হজমযোগ্য",
+      "সকল বয়সীদের জন্য উপযোগী",
+      "7 দিনে",
+      "দৃশ্যমান পরিবর্তন!",
+      "ওজন বাড়ায়",
+      "রুচি বাড়ায়",
+      "সুস্থ ও সবল করে",
+      "প্রতিদিন ২ বার সেবন করুন",
+      "হেলদি থাকুন, হেলদি জীবন গড়ুন!",
+      "100% NATURAL & SAFE",
+      "Healthy Plus",
+      "MILK SUPPLEMENT"
+    ],
+    "research_gold": {
+      "_status": "TO_FILL: check by hand on the web, then set checked_by",
+      "product_name": null,
+      "brand": null,
+      "manufacturer": null,
+      "official_website": null,
+      "official_source_exists": null,
+      "official_ingredients": [],
+      "acceptable_identity_statuses": [],
+      "notes": "Healthy Plus milk supplement (weight gain). Watermark text left out.",
+      "checked_by": null
+    }
+  },
+  {
+    "id": "r06_sugarlock",
+    "image_file_hint": "r06_sugarlock",
+    "ad_gold": {
+      "product": "সুগার লক",
+      "ingredients": [],
+      "claims": [
+        "ডায়াবেটিসের স্থায়ী সমাধান",
+        "কোনো প্রকার ওষুধ ছাড়া ডায়াবেটিস নিয়ন্ত্রণ করে",
+        "মাত্র ৭ দিনে ইনসুলিন/মেডিসিন ছেড়ে দিন",
+        "১০০% গ্যারান্টি",
+        "পার্শ্বপ্রতিক্রিয়া মুক্ত",
+        "বিএসটিআই এবং সাইন্সল্যাব অনুমোদিত"
+      ]
+    },
+    "transcript_lines": [
+      "ডায়াবেটিস এর ভয় আর নয়",
+      "ইনসুলিন আর মেডিসিন খেয়ে খেয়ে আর কত দিন?",
+      "আপনার প্রয়োজন স্থায়ী সমাধান।",
+      "ডায়াবেটিস নিয়ন্ত্রণ করুন কোনো প্রকার ওষুধ ছাড়া",
+      "সম্পূর্ণ প্রাকৃতিক উপায়ে।",
+      "একবার বিশ্বাস করেই দেখুন, আপনি জিতবেন।",
+      "১০০% গ্যারান্টি",
+      "মাত্র ৭ দিনে",
+      "ইনসুলিন/মেডিসিন",
+      "ছেড়ে দিন",
+      "সম্পূর্ণ প্রাকৃতিক উপায় এবং পার্শ্বপ্রতিক্রিয়া মুক্ত।",
+      "বিএসটিআই এবং সাইন্সল্যাব অনুমোদিত।"
+    ],
+    "research_gold": {
+      "_status": "TO_FILL: check by hand on the web, then set checked_by",
+      "product_name": null,
+      "brand": null,
+      "manufacturer": null,
+      "official_website": null,
+      "official_source_exists": null,
+      "official_ingredients": [],
+      "acceptable_identity_statuses": [],
+      "notes": "Sugar Lock diabetes product. Box label is stylised; product name read as সুগার লক.",
+      "checked_by": null
+    }
+  },
+  {
+    "id": "r07_hairpack",
+    "image_file_hint": "r07_hairpack",
+    "ad_gold": {
+      "product": "Complete Hair Treatment Pack",
+      "ingredients": [
+        "অর্গানিক হেয়ার অয়েল",
+        "হারবাল হেয়ার প্যাক",
+        "হারবাল শ্যাম্পু"
+      ],
+      "claims": [
+        "স্কাল্প পরিষ্কার থাকে",
+        "চুলের গোড়ায় পুষ্টি পৌঁছে",
+        "চুলের সামগ্রিক স্বাস্থ্য ভালো রাখতে সহায়তা করে",
+        "স্কাল্পে পুষ্টি প্রদান করে",
+        "চুলের গোড়া মজবুত করতে সহায়তা করে",
+        "চুল পড়া কমাতে সহায়ক",
+        "চুলকে নরম করতে পারে",
+        "চুলকে ঘন করতে পারে",
+        "চুলকে স্বাস্থ্যকর করতে পারে"
+      ]
+    },
+    "transcript_lines": [
+      "Complete",
+      "Hair Treatment Pack",
+      "চুলের সম্পূর্ণ যত্ন একসাথে, প্রাকৃতিক উপায়ে",
+      "যারা চুলের সম্পূর্ণ যত্ন একসাথে নিতে চান তাদের জন্য",
+      "এটি একটি ফুল হেয়ার কেয়ার সলিউশন।",
+      "অর্গানিক হেয়ার অয়েল, হারবাল হেয়ার প্যাক ও",
+      "হারবাল শ্যাম্পু একসাথে ব্যবহার করলে স্কাল্প পরিষ্কার থাকে,",
+      "চুলের গোড়ায় পুষ্টি পৌঁছে এবং নিয়মিত কেয়ারে চুলের",
+      "সামগ্রিক স্বাস্থ্য ভালো রাখতে সহায়তা করে।",
+      "এই প্যাকেজে পাচ্ছেন:",
+      "২০০ মি.লি অর্গানিক হেয়ার অয়েল",
+      "১৫০ গ্রাম হারবাল হেয়ার প্যাক",
+      "২০০ মি.লি হারবাল শ্যাম্পু",
+      "৩০+ প্রাকৃতিক উপাদানে তৈরি",
+      "ফ্রি পাচ্ছেন:",
+      "একটি কাঠের চিরুনি",
+      "একটি শ্যাম্পু ম্যাসাজার",
+      "মাসে ৩ বার কল করে হেয়ার কেয়ার সাজেশন",
+      "নিয়মিত ব্যবহারে যা উপকার পেতে পারেন:",
+      "স্কাল্প ক্লিন ও পুষ্টি প্রদান",
+      "চুলের গোড়া মজবুত করতে সহায়তা",
+      "চুল পড়া কমাতে সহায়ক",
+      "চুলকে করতে পারে নরম, ঘন ও স্বাস্থ্যকর",
+      "রেগুলার মূল্য:",
+      "২৪৯০ টাকা",
+      "বর্তমান অফার মূল্য:",
+      "মাত্র ১৭৯০ টাকা",
+      "ডেলিভারি চার্জ সম্পূর্ণ ফ্রি!",
+      "(সারা বাংলাদেশে)"
+    ],
+    "research_gold": {
+      "_status": "TO_FILL: check by hand on the web, then set checked_by",
+      "product_name": null,
+      "brand": null,
+      "manufacturer": null,
+      "official_website": null,
+      "official_source_exists": null,
+      "official_ingredients": [],
+      "acceptable_identity_statuses": [],
+      "notes": "Bangali TrendZ hair treatment pack. Prices and free gifts are not health content but are part of the transcript.",
+      "checked_by": null
+    }
+  }
+]

@@ -5,3 +5,8 @@
 *.pem
 google-credentials.json
 service-account.json
+
+# research agent v2 outputs
+backend/eval/out/
+backend/data/cache/
+data/cache/

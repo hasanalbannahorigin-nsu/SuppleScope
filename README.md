@@ -339,3 +339,29 @@ This repository already contains the initial SuppleScope project scaffold, inclu
 The current project is intentionally designed to keep the custom AI verification model outside the active implementation scope while enabling the full research and evidence-gathering workflow.
 
 # SuppleScope
+
+## 10. Research agent v2 (product intelligence) — milestone 1
+
+Pipeline: OCR -> ad extraction (only what the ad shows) -> research agent -> Research Dossier v2 -> separate custom verification model.
+Schemas: `backend/app/schemas/research/` (JSON Schema exports in `docs/schemas/`). The agent never writes a verdict.
+
+Implemented now: grounded LLM ad extractor; research phases 1-2 (product identity, brand/manufacturer, official
+website/label, full ingredient list, ad-vs-official differences) with source validation, a configurable search
+provider and search/fetch/LLM/time budgets. Ingredient, finished-product, claim and safety research are the next
+milestones and are reported as `NOT_SEARCHED` in the dossier until then.
+
+Turn it on in `.env` (free Gemini key from https://aistudio.google.com/apikey):
+
+```dotenv
+LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+LLM_MODEL=gemini-flash-lite-latest
+LLM_API_KEY=<your key>
+EXTRACTION_BACKEND=grounded_llm
+RESEARCH_AGENT=v2
+WEB_SEARCH_PROVIDER=duckduckgo   # or tavily + TAVILY_API_KEY
+```
+
+With the defaults (`EXTRACTION_BACKEND=baseline`, `RESEARCH_AGENT=legacy`) the app behaves exactly as before.
+
+New endpoints: `GET /api/advertisements/{id}/ad-extraction`, `/dossier-v2`, `/verifier-input.jsonl`.
+Evaluation on the real ads: see `backend/eval/README.md` and `backend/scripts/eval_real_ads.py`.
