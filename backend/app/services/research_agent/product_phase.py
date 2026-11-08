@@ -166,6 +166,29 @@ def same_product(name_a: str, name_b: str, *, brand_a: str | None = None, brand_
     return True
 
 
+def name_coverage(ad_name: str, cand_name: str) -> float | None:
+    """How much of the advertised name appears in a found product's name (0..1); None across scripts.
+
+    Every distinctive word of the ad name must be present. Extra words on the shop page are allowed
+    (shops add descriptors) but a distinctive extra word costs a little, since 'Saduri Plus' is not 'Saduri'.
+    'Complete Hair Treatment Pack' vs 'MAYA Ready to Use Complete Care Hair Pack' -> 0.6 (treatment missing).
+    """
+    if script_of(ad_name) != script_of(cand_name):
+        return None
+    a = core_product_name(ad_name).split() or ad_name.lower().split()
+    c = core_product_name(cand_name).split() or cand_name.lower().split()
+    a_key = [w for w in a if w not in _GENERIC] or a
+    if not a_key or not c:
+        return 0.0
+
+    def found(w: str, words: list[str]) -> bool:
+        return any(fuzz.ratio(w, x) >= 85 for x in words)
+
+    cov = sum(1 for w in a_key if found(w, c)) / len(a_key)
+    extra = [x for x in c if x not in _GENERIC and not re.fullmatch(r"[\d.]+", x) and not found(x, a)]
+    return round(cov * (0.9 if extra else 1.0), 2)
+
+
 @dataclass
 class _Cand:
     candidate_id: str
@@ -357,8 +380,8 @@ class ProductPhase:
 
     def _scores(self, c: _Cand) -> MatchScores:
         ad = self.ad
-        name = max((max(similarity(v, c.name), similarity(core_product_name(v) or v, core_product_name(c.name) or c.name))
-                    for v in self.name_variants), default=0.0)
+        covs = [x for x in (name_coverage(v, c.name) for v in self.name_variants) if x is not None]
+        name = max(covs) if covs else max((similarity(v, c.name) for v in self.name_variants), default=0.0)
         brand = (similarity(ad.brand.value, c.brand or c.name)
                  if ad.brand and _comparable(ad.brand.value, c.brand or c.name) else None)
         man = (similarity(ad.manufacturer.name.value, c.manufacturer)
@@ -386,8 +409,10 @@ class ProductPhase:
                 num += w * v
                 den += w
         score = num / den if den else 0.0
-        if refers and all(r == "no" for r in refers):
-            score *= 0.3
+        if refers:
+            # pages that say "this is NOT the advertised product" pull the score down in proportion
+            not_no = sum(1 for r in refers if r != "no") / len(refers)
+            score *= 0.3 + 0.7 * not_no
         return round(score, 2)
 
     def _decide_identity(self) -> None:
