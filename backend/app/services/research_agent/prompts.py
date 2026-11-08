@@ -67,6 +67,10 @@ READ_SYSTEM = f"""You read ONE web page (or PDF) and extract facts about a suppl
    OFFICIAL_LABEL = an image/PDF/transcription of the product's own label or package insert published by the manufacturer;
    REGULATORY = a government or regulator record;
    THIRD_PARTY_RETAIL = an online shop/pharmacy listing; THIRD_PARTY_OTHER = anything else.
+   A site with its own shop can still be OFFICIAL_MANUFACTURER, but ONLY if the page itself says it is the
+   brand owner's or manufacturer's own/official site (e.g. "official website of ...", "we manufacture",
+   an About-us naming the company as maker). A shop that sells this or other brands is THIRD_PARTY_RETAIL,
+   even if its domain contains the product name.
 2. Describe which product the page is about (about_product). Decide whether it is the SAME product as
    the advertised one (refers_to_ad_product: yes / no / unclear) and say why. Same name but different
    brand, manufacturer, country or form usually means a different product.
