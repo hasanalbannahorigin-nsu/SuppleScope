@@ -22,8 +22,9 @@ build/
 
 # Node
 frontend/node_modules/
-frontend/dist/
 frontend/.vite/
+!frontend/dist/
+!frontend/dist/**
 
 # Local data (uploads, models, databases)
 data/
