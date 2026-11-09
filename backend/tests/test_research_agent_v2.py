@@ -347,3 +347,12 @@ def test_unknown_ingredients_and_identity_mean_no_claim_search():
     assert d.ingredients == [] and d.evidence == []
     assert all(c.status == ResearchStatus.IDENTITY_UNCERTAIN for c in d.claims)
     assert AdExtraction and ExtractorInfo
+
+
+def test_support_needs_the_claimed_outcome():
+    from app.schemas.research.claim import EvidenceRelation, MatchLevel
+    from app.services.research_agent.evidence_phase import link_relation
+    # e.g. a blood-glucose study offered as support for 'strengthens the immune system'
+    assert link_relation("SUPPORTS", "DIFFERENT") == (EvidenceRelation.CONTEXT, MatchLevel.DIFFERENT)
+    assert link_relation("CONTRADICTS", "UNKNOWN")[0] == EvidenceRelation.CONTEXT
+    assert link_relation("SUPPORTS", "SIMILAR")[0] == EvidenceRelation.SUPPORTS

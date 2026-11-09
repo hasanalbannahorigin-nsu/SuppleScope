@@ -55,6 +55,7 @@ logger = logging.getLogger(__name__)
 PAPERS_PER_READ = 5
 ABSTRACT_CHARS = 3000
 MAX_RECORDS_PER_LINK_CALL = 12
+MAX_CONTEXT_LINKS = 3  # background links per claim; direct links are never capped
 OFFICIAL_CLASSES = {InformationClass.OFFICIAL_MANUFACTURER, InformationClass.OFFICIAL_LABEL, InformationClass.REGULATORY}
 HUMAN_TYPES = {StudyType.SYSTEMATIC_REVIEW, StudyType.META_ANALYSIS, StudyType.RCT, StudyType.NON_RANDOMIZED_TRIAL,
                StudyType.OBSERVATIONAL, StudyType.CASE_REPORT}
@@ -99,6 +100,15 @@ def _latin(names: list[str]) -> list[str]:
         if n and script_of(n) == "latin" and n.lower() not in (x.lower() for x in out):
             out.append(n)
     return out
+
+
+def link_relation(relation: str, outcome: str) -> tuple[EvidenceRelation, MatchLevel]:
+    """A study can only SUPPORT or CONTRADICT a claim whose effect it measured (outcome SAME/SIMILAR)."""
+    out = MatchLevel(outcome)
+    rel = EvidenceRelation(relation)
+    if rel != EvidenceRelation.CONTEXT and out not in (MatchLevel.SAME, MatchLevel.SIMILAR):
+        rel = EvidenceRelation.CONTEXT
+    return rel, out
 
 
 def _fallback_kind(claim: AdClaim) -> str:
@@ -409,6 +419,10 @@ class EvidencePhases:
         if kind in ("regulatory_or_quality", "other"):
             return ClaimResearch(**base, status=ResearchStatus.NOT_SEARCHED, finished_product_status=fp_status,
                                  notes="Not a health-effect claim; see the product's official and regulatory findings.")
+        if kind == "general_wellness":
+            return ClaimResearch(**base, status=ResearchStatus.NOT_SEARCHED, finished_product_status=fp_status,
+                                 notes="Non-specific wellness claim with no measurable outcome, so no study can "
+                                       "be matched to it.")
         researched = [iid for iid, r in results.items() if r.status not in (ResearchStatus.NOT_SEARCHED,)]
         linked = [i for i in (plan.ingredient_ids if plan else []) if i in ings] if kind == "health_effect" else researched
         if not ings:
@@ -436,7 +450,7 @@ class EvidencePhases:
         rank = {StudyType.META_ANALYSIS: 0, StudyType.SYSTEMATIC_REVIEW: 0, StudyType.RCT: 1}
         candidates.sort(key=lambda r: (rank.get(r.study_type, 2), not r.human_study))
         candidates = candidates[:MAX_RECORDS_PER_LINK_CALL]
-        links, dropped = [], 0
+        links, dropped, downgraded = [], 0, 0
         if self.exhausted:
             reading = None
         else:
@@ -457,24 +471,37 @@ class EvidencePhases:
                                    or quote_in_source(passage, self.s.paper_texts.get(rec.source_id, ""))):
                 dropped += 1
                 continue
+            relation, outcome = link_relation(li.relation, li.outcome)
+            downgraded += relation.value != li.relation
+            population = MatchLevel(li.population)
+            if rec.human_study is False and population == MatchLevel.SAME:
+                population = MatchLevel.DIFFERENT  # rats or cells are never the ad's audience
             links.append(ClaimEvidenceLink(
                 evidence_id=rec.evidence_id, scope=rec.scope,
                 ingredient_id=rec.subject_id if rec.scope == EvidenceScope.INGREDIENT else None,
-                relation=EvidenceRelation(li.relation),
-                match=ClaimEvidenceMatch(outcome=MatchLevel(li.outcome), population=MatchLevel(li.population),
+                relation=relation,
+                match=ClaimEvidenceMatch(outcome=outcome, population=population,
                                          dose=MatchLevel(li.dose), intervention=MatchLevel(li.intervention),
                                          qualifiers=MatchLevel(li.qualifiers), human_evidence=rec.human_study,
                                          notes=li.notes),
                 relevant_passage=passage))
-        direct = [x for x in links if x.relation != EvidenceRelation.CONTEXT
-                  and x.match.outcome in (MatchLevel.SAME, MatchLevel.SIMILAR)]
+        # Keep a few background links (human studies first) so weak context does not drown the direct ones.
+        context = sorted((x for x in links if x.relation == EvidenceRelation.CONTEXT),
+                         key=lambda x: not x.match.human_evidence)
+        trimmed = context[MAX_CONTEXT_LINKS:]
+        links = [x for x in links if x.relation != EvidenceRelation.CONTEXT] + context[:MAX_CONTEXT_LINKS]
+        direct = [x for x in links if x.relation != EvidenceRelation.CONTEXT]
         status = (ResearchStatus.FOUND if direct else ResearchStatus.PARTIAL if links
                   else ResearchStatus.NO_RELEVANT_STUDY_FOUND)
         if any(x.scope == EvidenceScope.FINISHED_PRODUCT for x in links):
             fp_status = ResearchStatus.FOUND
         elif fp_status == ResearchStatus.FOUND:
             fp_status = ResearchStatus.NO_RELEVANT_STUDY_FOUND  # product studies exist, none on this claim
-        notes = f"{dropped} link(s) dropped: quoted passage not found in the study record." if dropped else None
+        notes = " ".join(x for x in (
+            f"{dropped} link(s) dropped: quoted passage not found in the study record." if dropped else "",
+            f"{downgraded} link(s) changed to CONTEXT: the study did not measure the claimed effect." if downgraded else "",
+            f"{len(trimmed)} more background link(s) left out." if trimmed else "",
+        ) if x) or None
         return ClaimResearch(**base, linked_ingredient_ids=linked, status=status, finished_product_status=fp_status,
                              evidence_links=links, queries_tried=queries, notes=notes)
 

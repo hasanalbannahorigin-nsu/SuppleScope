@@ -144,8 +144,11 @@ For EACH ingredient (use its ingredient_id):
   otherwise null. synonyms: other names used in papers (English common names, older Latin names).
 - search_names: 1-3 short names that PubMed papers would use in titles/abstracts (no Bangla).
 For EACH claim (use its claim_id):
-- kind: health_effect (cures/treats/improves a condition or body function), safety (no side effects,
-  safe, natural, chemical-free), regulatory_or_quality (approved, certified, GMP, BSTI) or other.
+- kind: health_effect (cures/treats/improves a specific condition or body function that studies can
+  measure, e.g. blood sugar, immunity, weight, cough), safety (no side effects, safe, natural,
+  chemical-free), general_wellness (non-specific promises with no measurable outcome, e.g. 'keeps the
+  body healthy', 'detoxifies the body', 'Ayurvedic power'), regulatory_or_quality (approved, certified,
+  GMP, BSTI) or other.
 - outcome_terms: 1-4 English biomedical terms for the claimed effect, as used in papers
   (e.g. 'blood glucose', 'HbA1c', 'insulin resistance'); empty for regulatory_or_quality/other.
 - ingredient_ids: ingredients whose effect on that outcome is worth searching (may be empty).
@@ -162,7 +165,7 @@ class IngredientNames(BaseModel):
 
 class ClaimPlan(BaseModel):
     claim_id: str
-    kind: Literal["health_effect", "safety", "regulatory_or_quality", "other"]
+    kind: Literal["health_effect", "safety", "general_wellness", "regulatory_or_quality", "other"]
     outcome_terms: list[str] = Field(default_factory=list)
     ingredient_ids: list[str] = Field(default_factory=list)
     question: Optional[str] = None
@@ -233,7 +236,10 @@ For each record that bears on the claim, return:
   absolutes such as 'in 7 days', 'permanently', '100%' vs what the study showed; DIFFERENT when the
   study does not show them).
 - relevant_passage: the part of the record's passage that bears on the claim, copied exactly.
-Skip records that do not bear on the claim."""
+Be strict. SUPPORTS or CONTRADICTS only when the study measured the claimed effect itself (outcome SAME
+or SIMILAR): a blood-glucose or antioxidant study does not support 'strengthens the immune system' or
+'keeps the body healthy'; mark it CONTEXT or skip it. Animal and lab studies may be linked, but they are
+never about the ad's population (population DIFFERENT). Skip records that do not bear on the claim."""
 
 
 class LinkItem(BaseModel):
