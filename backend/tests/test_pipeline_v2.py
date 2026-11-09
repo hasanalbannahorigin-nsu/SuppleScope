@@ -118,3 +118,26 @@ def test_legacy_report_shows_ingredient_and_claim_research():
     assert all(e.evidence_scope == "ingredient" for e in legacy.scientific_evidence)
     assert legacy.effectiveness_research and "No verdict" in legacy.effectiveness_research[0].summary
     assert legacy.effectiveness_research[0].caveat.startswith("Ingredient-level")
+
+
+def test_research_cannot_start_while_analysis_runs(db_session, monkeypatch):
+    from fastapi import HTTPException
+
+    from app.api.routes import advertisements as routes
+
+    spawned = []
+    monkeypatch.setattr(routes, "spawn", lambda fn, *args: spawned.append(args))
+    ad_id, job_id = _seed(db_session)
+    db = db_session()
+    user = db.query(User).first()
+
+    with pytest.raises(HTTPException) as err:  # analyze job still queued
+        routes.start_research(ad_id, user, db)
+    assert err.value.status_code == 409
+    assert spawned == []
+
+    job = db.get(ResearchJob, job_id)
+    job.status = "completed"
+    db.commit()
+    result = routes.start_research(ad_id, user, db)
+    assert result["status"] == "queued" and len(spawned) == 1
