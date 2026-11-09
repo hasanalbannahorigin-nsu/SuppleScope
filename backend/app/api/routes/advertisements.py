@@ -356,6 +356,15 @@ def start_research(
     db: Session = Depends(get_db),
 ) -> dict:
     ad = get_owned_advertisement(db, user, advertisement_id)
+    analyze = (
+        db.query(ResearchJob)
+        .filter_by(advertisement_id=ad.id, job_type="analyze")
+        .order_by(ResearchJob.created_at.desc())
+        .first()
+    )
+    if analyze is not None and analyze.status in {"queued", "running"}:
+        # research reads the stored extraction; starting early would race the analyze job
+        raise HTTPException(status_code=409, detail="Analysis is still running. Start research when it has finished.")
     existing = (
         db.query(ResearchJob)
         .filter_by(advertisement_id=ad.id, job_type="research")

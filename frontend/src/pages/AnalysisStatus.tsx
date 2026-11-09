@@ -28,6 +28,7 @@ export function AnalysisStatus() {
   const { id } = useParams();
   const [data, setData] = useState<StatusPayload | null>(null);
   const [error, setError] = useState("");
+  const [pollKey, setPollKey] = useState(0);
 
   useEffect(() => {
     let timer: number | undefined;
@@ -50,16 +51,19 @@ export function AnalysisStatus() {
       cancelled = true;
       if (timer !== undefined) window.clearTimeout(timer);
     };
-  }, [id]);
+  }, [id, pollKey]);
+
+  const analysisRunning = ["queued", "running"].includes(data?.analyze_job.status || "");
+  const researchRunning = ["queued", "running"].includes(data?.research_job.status || "");
+  const canStartResearch = data?.analyze_job.status === "completed" && !researchRunning;
 
   async function startResearch() {
     try {
       await api.post(`/advertisements/${id}/research`);
-      const res = await api.get(`/advertisements/${id}/status`);
-      setData(res.data);
       setError("");
-    } catch {
-      setError("Could not start research. Check the backend response and retry.");
+      setPollKey((k) => k + 1); // restart polling so the research stages update live
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || "Could not start research. Check the backend response and retry.");
     }
   }
 
@@ -98,9 +102,22 @@ export function AnalysisStatus() {
       </ol>
       {data?.analyze_job.error && <p className="text-sm text-rose-300">{data.analyze_job.error}</p>}
       {data?.research_job.error && <p className="text-sm text-rose-300">{data.research_job.error}</p>}
+      {analysisRunning && (
+        <p className="text-sm text-slate-400">Wait for information extraction to finish before starting research.</p>
+      )}
+      {researchRunning && (
+        <p className="text-sm text-slate-400">
+          The research agent is working (usually 3 to 8 minutes on the free Gemini tier). The steps below the
+          extraction turn completed together when it finishes.
+        </p>
+      )}
       <div className="flex flex-wrap gap-3">
-        <button onClick={startResearch} className="rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold">
-          Start agentic research
+        <button
+          onClick={startResearch}
+          disabled={!canStartResearch}
+          className="rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {researchRunning ? "Research running…" : "Start agentic research"}
         </button>
         <Link to={`/app/ads/${id}/report`} className="rounded-xl border border-white/15 px-4 py-2 text-sm">
           Open research report
