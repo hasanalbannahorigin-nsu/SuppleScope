@@ -84,7 +84,7 @@
       "additionalProperties": false,
       "properties": {
         "schema_version": {
-          "default": "2.0.0",
+          "default": "2.1.0",
           "title": "Schema Version",
           "type": "string"
         },
@@ -2176,6 +2176,11 @@
           "title": "Max Seconds",
           "type": "integer"
         },
+        "max_literature_calls": {
+          "default": 0,
+          "title": "Max Literature Calls",
+          "type": "integer"
+        },
         "used_search_calls": {
           "default": 0,
           "title": "Used Search Calls",
@@ -2189,6 +2194,11 @@
         "used_llm_calls": {
           "default": 0,
           "title": "Used Llm Calls",
+          "type": "integer"
+        },
+        "used_literature_calls": {
+          "default": 0,
+          "title": "Used Literature Calls",
           "type": "integer"
         },
         "elapsed_seconds": {
@@ -2211,7 +2221,7 @@
             }
           ],
           "default": null,
-          "description": "'search', 'fetch', 'llm', 'time'",
+          "description": "'search', 'fetch', 'llm', 'literature', 'time'",
           "title": "Exhausted Reason"
         }
       },
@@ -2671,7 +2681,7 @@
   "additionalProperties": false,
   "properties": {
     "schema_version": {
-      "default": "2.0.0",
+      "default": "2.1.0",
       "title": "Schema Version",
       "type": "string"
     },

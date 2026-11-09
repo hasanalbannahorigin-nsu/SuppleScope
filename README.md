@@ -340,15 +340,26 @@ The current project is intentionally designed to keep the custom AI verification
 
 # SuppleScope
 
-## 10. Research agent v2 (product intelligence) — milestone 1
+## 10. Research agent v2 (product intelligence + literature) — milestones 1-2
 
 Pipeline: OCR -> ad extraction (only what the ad shows) -> research agent -> Research Dossier v2 -> separate custom verification model.
 Schemas: `backend/app/schemas/research/` (JSON Schema exports in `docs/schemas/`). The agent never writes a verdict.
 
 Implemented now: grounded LLM ad extractor; research phases 1-2 (product identity, brand/manufacturer, official
 website/label, full ingredient list, ad-vs-official differences) with source validation, a configurable search
-provider and search/fetch/LLM/time budgets. Ingredient, finished-product, claim and safety research are the next
-milestones and are reported as `NOT_SEARCHED` in the dossier until then.
+provider and search/fetch/LLM/time budgets.
+
+Milestone 2 adds phases 3-6 (`backend/app/services/research_agent/evidence_phase.py`):
+- **Ingredients:** for each ingredient (from the confirmed label, or only what the ad shows), PubMed / Europe PMC
+  abstracts on the claimed outcomes and on safety. Each study becomes an `EvidenceRecord` (design, human or not,
+  population, dose, duration, outcomes, neutral summary) whose quoted passage must be found in the abstract;
+  side effects, contraindications, drug interactions and disease cautions are kept only with a verified quote.
+- **Finished product:** studies that name the exact product; kept separate (scope `FINISHED_PRODUCT`).
+- **Claims:** each health claim is linked to studies as SUPPORTS / CONTRADICTS / CONTEXT with match levels for
+  outcome, population, dose, intervention and qualifiers ("in 7 days", "100%"). This describes the studies; it is
+  not a verdict. The verifier input JSONL now carries these links and records.
+- **Gaps:** ingredients, claims or product studies not found (or not reached within the budget) are listed in
+  `missing_information` with the queries tried.
 
 Turn it on in `.env` (free Gemini key from https://aistudio.google.com/apikey):
 

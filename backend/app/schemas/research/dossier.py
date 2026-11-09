@@ -30,12 +30,14 @@ class ResearchBudget(Strict):
     max_llm_calls: int
     max_retries_per_call: int
     max_seconds: int
+    max_literature_calls: int = 0
     used_search_calls: int = 0
     used_fetches: int = 0
     used_llm_calls: int = 0
+    used_literature_calls: int = 0
     elapsed_seconds: float = 0
     exhausted: bool = False
-    exhausted_reason: str | None = Field(None, description="'search', 'fetch', 'llm', 'time'")
+    exhausted_reason: str | None = Field(None, description="'search', 'fetch', 'llm', 'literature', 'time'")
 
 
 class AgentInfo(Strict):

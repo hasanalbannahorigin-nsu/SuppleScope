@@ -37,7 +37,7 @@ def build_verifier_inputs(d: ResearchDossierV2) -> list[VerifierInput]:
     for cr in d.claims:
         claim = ad_claims[cr.claim_id]
         ingredients = [composed[i] for i in cr.linked_ingredient_ids if i in composed]
-        ev = [evidence[link.evidence_id] for link in cr.evidence_links]
+        ev = [evidence[e] for e in dict.fromkeys(link.evidence_id for link in cr.evidence_links)]
         finding_ids = [fid for ing in ingredients for fid in ing.finding_ids] + cr.official_material_finding_ids
         fs = [findings[f] for f in dict.fromkeys(finding_ids) if f in findings]
         ing_mentions = {i.ad_mention_id for i in ingredients if i.ad_mention_id}

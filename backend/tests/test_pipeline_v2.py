@@ -25,7 +25,7 @@ from app.schemas.research import ResearchDossierV2
 from app.services.ocr.base import OcrOutput
 from app.services.research_agent import runner
 from app.services.verification.handoff import build_verifier_inputs
-from tests.test_research_agent_v2 import AD_TEXT, FakeLlm, FakeSearch, _budget, fake_fetch
+from tests.test_research_agent_v2 import AD_TEXT, FAKE_LITERATURE, FakeLlm, FakeSearch, _budget, fake_fetch
 
 
 @pytest.fixture
@@ -65,7 +65,8 @@ def test_v2_pipeline_end_to_end(db_session, monkeypatch):
     monkeypatch.setattr(pipeline, "run_ocr_on_image", lambda path, compare=True: [
         OcrOutput(provider="tesseract", raw_text=AD_TEXT, cleaned_text=AD_TEXT, average_confidence=0.8)])
     monkeypatch.setattr(runner, "run_research", partial(runner.run_research, llm=FakeLlm(), search=FakeSearch(),
-                                                        fetcher=fake_fetch, budget=_budget(), use_cache=False))
+                                                        fetcher=fake_fetch, literature=FAKE_LITERATURE,
+                                                        budget=_budget(), use_cache=False))
     ad_id, job_id = _seed(db_session)
 
     pipeline.run_analyze_job(job_id)
@@ -85,7 +86,7 @@ def test_v2_pipeline_end_to_end(db_session, monkeypatch):
     record = db.query(ResearchDossierRecord).filter_by(advertisement_id=ad_id).one()
     dossier = ResearchDossierV2.model_validate(record.payload)
     assert dossier.product.identity.status.value == "VERIFIED"
-    assert len(build_verifier_inputs(dossier)) == 0  # claim research is the next milestone
+    assert len(build_verifier_inputs(dossier)) == 2  # one verifier input per ad claim
     # the existing report still works, fed from the v2 dossier
     report = db.query(ResearchReport).filter_by(advertisement_id=ad_id).one()
     assert report.dossier["product_identity"]["identity_status"] == "verified"
@@ -106,3 +107,14 @@ def test_legacy_flow_unchanged_by_default(db_session, monkeypatch):
     assert db.get(ResearchJob, job_id).status == "completed"
     assert db.query(AdExtractionRecord).filter_by(advertisement_id=ad_id).one().extractor == "regex_baseline"
     assert db.query(ExtractedProduct).filter_by(advertisement_id=ad_id).one().extra["backend"] == "baseline"
+
+
+def test_legacy_report_shows_ingredient_and_claim_research():
+    from app.services.pipeline_v2 import to_legacy_dossier
+    from tests.test_research_agent_v2 import _full_run
+    legacy = to_legacy_dossier(_full_run())
+    syz = next(i for i in legacy.ingredient_research if "Syzygium" in i.ingredient_name)
+    assert syz.human_studies_summary and syz.side_effects == "mild GI discomfort"
+    assert all(e.evidence_scope == "ingredient" for e in legacy.scientific_evidence)
+    assert legacy.effectiveness_research and "No verdict" in legacy.effectiveness_research[0].summary
+    assert legacy.effectiveness_research[0].caveat.startswith("Ingredient-level")

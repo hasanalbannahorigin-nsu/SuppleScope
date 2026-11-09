@@ -133,3 +133,120 @@ class CheckItem(BaseModel):
 
 class CheckResult(BaseModel):
     items: list[CheckItem] = Field(default_factory=list)
+
+
+# ==== Milestone 2: ingredient, finished-product and claim research ==========================
+
+EVIDENCE_PLAN_SYSTEM = f"""You plan a biomedical literature search for the ingredients of a supplement and
+the health claims made in its advertisement. {GUARD}
+For EACH ingredient (use its ingredient_id):
+- scientific_name: the botanical/chemical name if you are confident (e.g. jamun seed -> Syzygium cumini);
+  otherwise null. synonyms: other names used in papers (English common names, older Latin names).
+- search_names: 1-3 short names that PubMed papers would use in titles/abstracts (no Bangla).
+For EACH claim (use its claim_id):
+- kind: health_effect (cures/treats/improves a condition or body function), safety (no side effects,
+  safe, natural, chemical-free), regulatory_or_quality (approved, certified, GMP, BSTI) or other.
+- outcome_terms: 1-4 English biomedical terms for the claimed effect, as used in papers
+  (e.g. 'blood glucose', 'HbA1c', 'insulin resistance'); empty for regulatory_or_quality/other.
+- ingredient_ids: ingredients whose effect on that outcome is worth searching (may be empty).
+- question: one English research question, e.g. 'Does Syzygium cumini seed lower blood glucose in humans?'
+Do not judge whether any claim is true."""
+
+
+class IngredientNames(BaseModel):
+    ingredient_id: str
+    scientific_name: Optional[str] = None
+    synonyms: list[str] = Field(default_factory=list)
+    search_names: list[str] = Field(default_factory=list)
+
+
+class ClaimPlan(BaseModel):
+    claim_id: str
+    kind: Literal["health_effect", "safety", "regulatory_or_quality", "other"]
+    outcome_terms: list[str] = Field(default_factory=list)
+    ingredient_ids: list[str] = Field(default_factory=list)
+    question: Optional[str] = None
+
+
+class EvidencePlan(BaseModel):
+    ingredients: list[IngredientNames] = Field(default_factory=list)
+    claims: list[ClaimPlan] = Field(default_factory=list)
+
+
+READ_PAPERS_SYSTEM = f"""You read numbered scientific abstracts about ONE supplement ingredient (or ONE
+finished product) and describe each study neutrally. {GUARD}
+For each paper index:
+- relevant: true only if the study actually tests or reviews THIS ingredient/product (not just mentions it).
+- study_type: SYSTEMATIC_REVIEW, META_ANALYSIS, RCT, NON_RANDOMIZED_TRIAL, OBSERVATIONAL, CASE_REPORT,
+  ANIMAL, IN_VITRO, NARRATIVE_REVIEW or OTHER. human_study: true/false.
+- population, sample_size, intervention, dose, duration, comparator: as written in the abstract, else null.
+- effects: short outcome labels that were studied, e.g. 'blood glucose', 'HbA1c', 'body weight'.
+- result_summary: what the abstract reports, in one or two neutral sentences. Say plainly when an
+  effect was not found or the evidence is weak. Do not judge any advertisement.
+- passage: ONE sentence copied character-for-character from the abstract that states the main result.
+- limitations: as stated or obvious from the design (animal only, small sample, no control).
+- safety: adverse effects, toxicity, contraindications, drug interactions or disease cautions the
+  abstract reports, each with kind (side_effect, contraindication, drug_interaction, disease_caution),
+  description, drug_or_condition (for interactions/cautions) and a passage copied from the abstract.
+Never use knowledge that is not in the abstract."""
+
+
+class PaperSafety(BaseModel):
+    kind: Literal["side_effect", "contraindication", "drug_interaction", "disease_caution"]
+    description: str
+    drug_or_condition: Optional[str] = None
+    passage: str
+
+
+class PaperReading(BaseModel):
+    index: int
+    relevant: bool
+    study_type: str = "OTHER"
+    human_study: Optional[bool] = None
+    population: Optional[str] = None
+    sample_size: Optional[int] = None
+    intervention: Optional[str] = None
+    dose: Optional[str] = None
+    duration: Optional[str] = None
+    comparator: Optional[str] = None
+    effects: list[str] = Field(default_factory=list)
+    result_summary: Optional[str] = None
+    passage: Optional[str] = None
+    limitations: list[str] = Field(default_factory=list)
+    safety: list[PaperSafety] = Field(default_factory=list)
+
+
+class PapersReading(BaseModel):
+    papers: list[PaperReading] = Field(default_factory=list)
+
+
+LINK_SYSTEM = f"""You relate ONE advertised health claim to numbered study records. {GUARD}
+For each record that bears on the claim, return:
+- relation: SUPPORTS if the study reports the claimed kind of effect, CONTRADICTS if it reports no
+  effect, the opposite, or harm relevant to the claim, CONTEXT for related background (mechanism,
+  safety, a different but related outcome). This describes the study, NOT whether the ad is true.
+- match levels (SAME, SIMILAR, DIFFERENT, UNKNOWN):
+  outcome (study outcome vs claimed effect), population (study people vs the ad's audience),
+  dose (tested dose vs product dose; UNKNOWN if the product dose is unknown),
+  intervention (SAME = this exact finished product, SIMILAR = same ingredient and form,
+  DIFFERENT = other form/extract or a mixture), qualifiers (the ad's time frames, magnitudes and
+  absolutes such as 'in 7 days', 'permanently', '100%' vs what the study showed; DIFFERENT when the
+  study does not show them).
+- relevant_passage: the part of the record's passage that bears on the claim, copied exactly.
+Skip records that do not bear on the claim."""
+
+
+class LinkItem(BaseModel):
+    index: int
+    relation: Literal["SUPPORTS", "CONTRADICTS", "CONTEXT"]
+    outcome: Literal["SAME", "SIMILAR", "DIFFERENT", "UNKNOWN"] = "UNKNOWN"
+    population: Literal["SAME", "SIMILAR", "DIFFERENT", "UNKNOWN"] = "UNKNOWN"
+    dose: Literal["SAME", "SIMILAR", "DIFFERENT", "UNKNOWN"] = "UNKNOWN"
+    intervention: Literal["SAME", "SIMILAR", "DIFFERENT", "UNKNOWN"] = "UNKNOWN"
+    qualifiers: Literal["SAME", "SIMILAR", "DIFFERENT", "UNKNOWN"] = "UNKNOWN"
+    relevant_passage: str
+    notes: Optional[str] = None
+
+
+class ClaimLinks(BaseModel):
+    links: list[LinkItem] = Field(default_factory=list)

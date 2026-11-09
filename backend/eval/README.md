@@ -24,3 +24,14 @@ Run (from `backend`, with the venv active and `.env` set up):
 
 Outputs go to `eval/out/<run>/`: one dossier per ad, `report.md` with all metrics,
 and `findings_review.csv` to mark by hand whether each kept finding is truly supported.
+
+### Milestone 2 outputs (ingredient and claim research)
+
+`report.md` gets a second table per ad: ingredients researched (and how many have human studies), studies kept
+vs rejected by the quote check, human studies, safety items, claim research status counts, the number of
+claim-study links, and whether any study of the finished product was found.
+
+`claim_links_review.csv` lists every claim-study link with the study, its design, the relation
+(SUPPORTS / CONTRADICTS / CONTEXT), the passage and the PubMed link. Mark three columns by hand:
+`study_is_about_ingredient`, `passage_bears_on_claim`, `relation_correct` (y/n). The share of "n" answers is the
+link error rate to report in the thesis; it measures hallucinated or misread evidence, not the truth of the ad.

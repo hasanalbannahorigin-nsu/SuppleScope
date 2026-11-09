@@ -1,4 +1,4 @@
-"""Evaluate ad extraction + research agent v2 (milestone 1) on the real ads.
+"""Evaluate ad extraction + research agent v2 (milestones 1-2) on the real ads.
 
     cd backend
     python scripts/eval_real_ads.py --images D:\\CSE499\\ocr-agent\\data\\real\\images
@@ -11,6 +11,8 @@ Metrics (see eval/README.md):
   sources         share of kept findings from official / regulatory / third-party sources
   missing info    composition reported FOUND although no official source exists (should be 0)
   hallucination   findings rejected by validation; kept findings exported for manual review
+  literature      ingredients researched, studies kept/rejected (quote check), human studies,
+                  claim statuses; every claim-study link exported to claim_links_review.csv
 """
 from __future__ import annotations
 
@@ -91,7 +93,7 @@ def main() -> None:
     out = ROOT / "eval" / "out" / datetime.now().strftime("%Y%m%d_%H%M%S")
     out.mkdir(parents=True, exist_ok=True)
 
-    rows, review = [], []
+    rows, review, link_review = [], [], []
     failed: list[dict] = []
     for g in gold:
         ad_id = g["id"]
@@ -137,6 +139,18 @@ def main() -> None:
             (out / f"{ad_id}_dossier.json").write_text(d.model_dump_json(indent=2), encoding="utf-8")
             row.update(score_research(d, g["research_gold"]))
             row["research_seconds"] = round(time.time() - t1, 1)
+            ev = {e.evidence_id: e for e in d.evidence}
+            srcs = {x.source_id: x for x in d.sources}
+            for c in d.claims:
+                for link in c.evidence_links:
+                    e = ev[link.evidence_id]
+                    link_review.append({
+                        "ad": ad_id, "claim_id": c.claim_id, "claim": c.claim_text_original, "claim_en": c.claim_text_en or "",
+                        "study_subject": e.subject_name, "scope": e.scope.value, "study_type": e.study_type.value,
+                        "human": e.human_study, "relation": link.relation.value, "outcome_match": link.match.outcome.value,
+                        "qualifiers_match": link.match.qualifiers.value, "relevant_passage": link.relevant_passage,
+                        "url": srcs[e.source_id].url or "", "study_is_about_ingredient (y/n)": "",
+                        "passage_bears_on_claim (y/n)": "", "relation_correct (y/n)": ""})
             for f in d.findings:
                 if f.validation.passed:
                     src = next(s for s in d.sources if s.source_id == f.source_id)
@@ -151,6 +165,11 @@ def main() -> None:
             w = csv.DictWriter(fh, fieldnames=list(review[0]))
             w.writeheader()
             w.writerows(review)
+    with (out / "claim_links_review.csv").open("w", encoding="utf-8-sig", newline="") as fh:
+        if link_review:
+            w = csv.DictWriter(fh, fieldnames=list(link_review[0]))
+            w.writeheader()
+            w.writerows(link_review)
     report = render_report(rows, args, failed)
     (out / "report.md").write_text(report, encoding="utf-8")
     (out / "rows.json").write_text(json.dumps(rows, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
@@ -181,7 +200,19 @@ def score_research(d: ResearchDossierV2, rg: dict) -> dict:
         "composition_from_unverified": sum(1 for i in comp.ingredients
                                            if any(next(f for f in d.findings if f.finding_id == fid).information_class == InformationClass.UNVERIFIED
                                                   for fid in i.finding_ids)),
-        "budget": d.budget.model_dump(include={"used_search_calls", "used_fetches", "used_llm_calls", "elapsed_seconds", "exhausted_reason"}),
+        "budget": d.budget.model_dump(include={"used_search_calls", "used_fetches", "used_llm_calls", "used_literature_calls",
+                                               "elapsed_seconds", "exhausted_reason"}),
+        "ingredients_total": len(d.ingredients),
+        "ingredients_researched": sum(1 for i in d.ingredients if i.status != ResearchStatus.NOT_SEARCHED),
+        "ingredients_human_evidence": sum(1 for i in d.ingredients if i.status == ResearchStatus.FOUND),
+        "studies_kept": sum(1 for e in d.evidence if e.validation.passed),
+        "studies_rejected": sum(1 for e in d.evidence if not e.validation.passed),
+        "human_studies": sum(1 for e in d.evidence if e.validation.passed and e.human_study),
+        "safety_items": sum(len(i.safety.side_effects) + len(i.safety.contraindications) + len(i.safety.drug_interactions)
+                            + len(i.safety.disease_cautions) for i in d.ingredients),
+        "claim_status": dict(Counter(c.status.value for c in d.claims)),
+        "claim_links": sum(len(c.evidence_links) for c in d.claims),
+        "finished_product_status": d.product.finished_product.status.value,
         "gold_filled": research_filled(rg),
     }
     if out["gold_filled"]:
@@ -241,6 +272,19 @@ def render_report(rows: list[dict], args, failed: list[dict] | None = None) -> s
                   f"- Composition entries built from unverified findings (should be 0): {sum(r['composition_from_unverified'] for r in res)}",
                   f"- Status counts: {dict(Counter(r['identity_status'] for r in res))}",
                   "- Unsupported-fact rate among KEPT findings: mark findings_review.csv by hand, then count 'n'.", ""]
+    if res:
+        lines += ["## Ingredient and claim research (milestone 2)", "",
+                  "| ad | ingredients researched (human evidence) | studies kept/rejected | human studies | safety items | "
+                  "claims: status counts | claim-study links | finished-product studies |",
+                  "|---|---|---|---|---|---|---|---|"]
+        for r in res:
+            cs = ", ".join(f"{k} {v}" for k, v in sorted(r["claim_status"].items())) or "-"
+            lines.append(f"| {r['ad']} | {r['ingredients_researched']}/{r['ingredients_total']} ({r['ingredients_human_evidence']}) | "
+                         f"{r['studies_kept']}/{r['studies_rejected']} | {r['human_studies']} | {r['safety_items']} | {cs} | "
+                         f"{r['claim_links']} | {r['finished_product_status']} |")
+        lines += ["", f"- Studies rejected because the quoted passage is not in the abstract: "
+                  f"{sum(r['studies_rejected'] for r in res)} of {sum(r['studies_kept'] + r['studies_rejected'] for r in res)}",
+                  "- Check claim_links_review.csv by hand (y/n columns) to measure wrong or unsupported links.", ""]
     errors = [f"- {r['ad']}: research: {r['research_error']}" for r in rows if r.get("research_error")]
     errors += [f"- {f['ad']}: {f['error']}" for f in failed or []]
     if errors:
