@@ -58,11 +58,16 @@ class Settings(BaseSettings):
     # Research agent v2 limits (all configurable from .env)
     research_max_search_calls: int = 30
     research_max_fetches: int = 20
-    research_max_llm_calls: int = 40
+    research_max_llm_calls: int = 80
     research_max_retries_per_call: int = 2
-    research_max_seconds: int = 600
+    research_max_seconds: int = 1200
     research_max_rounds: int = 3
     research_fetch_max_chars: int = 60000
+    # milestone 2: ingredient / finished-product / claim literature research
+    research_max_literature_calls: int = 40
+    research_max_ingredients: int = 6
+    research_papers_per_query: int = 5
+    research_literature_providers: str = "pubmed,europepmc"
     research_cache_dir: str = "./data/cache/research"
     # Free LLM tiers limit requests per minute; wait this long between LLM calls.
     llm_min_seconds_between_calls: float = 4.0

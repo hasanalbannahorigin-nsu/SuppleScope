@@ -33,7 +33,8 @@ def _ncbi_params() -> dict:
 
 def pubmed_search(query: str, retmax: int = 8) -> list[Paper]:
     search = get_json("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
-                      params={"db": "pubmed", "term": query, "retmode": "json", "retmax": str(retmax), **_ncbi_params()})
+                      params={"db": "pubmed", "term": query, "retmode": "json", "retmax": str(retmax),
+                              "sort": "relevance", **_ncbi_params()})
     ids = search.get("esearchresult", {}).get("idlist", [])
     if not ids:
         return []
@@ -94,3 +95,15 @@ def europepmc_search(query: str, page_size: int = 8) -> list[Paper]:
 
 def paper_to_json(p: Paper) -> dict:
     return asdict(p)
+
+
+def paper_from_json(d: dict) -> Paper:
+    return Paper(**d)
+
+
+LITERATURE_SEARCH = {"pubmed": pubmed_search, "europepmc": europepmc_search}
+
+
+def literature_providers_from_settings() -> list[str]:
+    names = [n.strip().lower() for n in (get_settings().research_literature_providers or "").split(",") if n.strip()]
+    return [n for n in names if n in LITERATURE_SEARCH] or ["pubmed"]

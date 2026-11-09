@@ -1,6 +1,7 @@
 """Mutable state of one research run, plus the tool wrappers that charge the budget and log."""
 from __future__ import annotations
 
+import hashlib
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -12,6 +13,7 @@ from app.services.llm.client import JsonLlm
 from app.services.research_agent.budget import Budget, BudgetExhausted
 from app.services.research_agent.tools.cache import NullCache
 from app.services.research_agent.tools.fetch import FetchedDoc, doc_from_json, doc_to_json, fetch_document
+from app.services.research_agent.tools.literature import LITERATURE_SEARCH, Paper, paper_from_json, paper_to_json
 from app.services.research_agent.tools.search import SearchHit, SearchProvider, hits_from_json, hits_to_json
 
 logger = logging.getLogger(__name__)
@@ -75,6 +77,10 @@ class ResearchState:
     log: list[LogEntry] = field(default_factory=list)
     queries_tried: list[str] = field(default_factory=list)
     urls_seen: set[str] = field(default_factory=set)
+    literature_search: dict = field(default_factory=lambda: dict(LITERATURE_SEARCH))
+    literature_queries: list[str] = field(default_factory=list)
+    paper_sources: dict[str, str] = field(default_factory=dict)  # pmid/doi/title key -> source_id
+    paper_texts: dict[str, str] = field(default_factory=dict)  # source_id -> title + abstract (for quote checks)
     _ids: dict[str, int] = field(default_factory=dict)
 
     def new_id(self, prefix: str) -> str:
@@ -144,15 +150,58 @@ class ResearchState:
         self.add_log(phase, "fetch", tool="fetch_page", target_url=url)
         return doc
 
+    def literature(self, provider: str, query: str, phase: str, retmax: int = 5) -> list[Paper]:
+        """PubMed / Europe PMC search returning papers with abstracts (cached, budgeted, logged)."""
+        query = " ".join(query.split())
+        key = f"{provider}|{retmax}|{query}"
+        if not query or key in self.literature_queries:
+            return []
+        self.literature_queries.append(key)
+        tool = f"literature:{provider}"
+        cached = self.cache.get("literature", key)
+        if cached is not None:
+            papers = [paper_from_json(x) for x in cached]
+            self.add_log(phase, "search", tool=f"{tool}(cache)", query=query, result_count=len(papers))
+            return papers
+        self.budget.charge_literature()
+        try:
+            papers = self._retry(self.literature_search[provider], query, retmax)
+        except BudgetExhausted:
+            raise
+        except Exception as exc:
+            self.add_log(phase, "search", tool=tool, query=query, error=str(exc)[:300])
+            return []
+        self.cache.set("literature", key, [paper_to_json(x) for x in papers])
+        self.add_log(phase, "search", tool=tool, query=query, result_count=len(papers))
+        return papers
+
+    def add_paper_source(self, paper: Paper) -> Source:
+        key = (paper.pmid and f"pmid:{paper.pmid}") or (paper.doi and f"doi:{paper.doi.lower()}") or f"title:{paper.title.lower()}"
+        if key in self.paper_sources:
+            return self.sources[self.paper_sources[key]]
+        text = f"{paper.title}\n{paper.abstract}"
+        src = Source(
+            source_id=self.new_id("src"), source_type=SourceType.SCIENTIFIC_LITERATURE, url=paper.url, doi=paper.doi,
+            pmid=paper.pmid, pmcid=paper.pmcid, title=paper.title or None, site_or_publisher=paper.provider or None,
+            authors=paper.authors, journal=paper.journal, publication_year=paper.year, language="en",
+            retrieved_at=now(), retrieved_by_tool=f"{paper.provider or 'literature'}_search",
+            content_hash=hashlib.sha256(text.encode("utf-8")).hexdigest(),
+            reliability_rank=SOURCE_RANK[SourceType.SCIENTIFIC_LITERATURE],
+        )
+        self.sources[src.source_id] = src
+        self.paper_sources[key] = src.source_id
+        self.paper_texts[src.source_id] = text
+        return src
+
     def llm_parse(self, system: str, user: str, schema, phase: str, label: str):
         try:
             out = self.llm.parse(system, user, schema, counter=self.budget)
         except BudgetExhausted:
             raise
         except Exception as exc:
-            self.add_log(phase, "read" if label == "read_page" else "plan", tool=f"llm:{label}", error=str(exc)[:300])
+            self.add_log(phase, "read" if label.startswith("read") else "plan", tool=f"llm:{label}", error=str(exc)[:300])
             return None
-        self.add_log(phase, "read" if label == "read_page" else "plan", tool=f"llm:{label}")
+        self.add_log(phase, "read" if label.startswith("read") else "plan", tool=f"llm:{label}")
         return out
 
     def add_source(self, doc: FetchedDoc, source_type: SourceType, tool: str) -> Source:
