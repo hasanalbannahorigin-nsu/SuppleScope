@@ -59,23 +59,42 @@ SAFETY_CUES = re.compile(
     r"too low|blood thinner|anticoagul|liver (damage|injury|problem|toxicity|failure)|hepatotox|"
     r"kidney (damage|problem|failure)|allerg|overdose|upper limit|\bUL\b|miscarriage|contraindicat|not recommended|"
     r"should not|shouldn.t|do not (take|use)|don.t (take|use)|stop taking|harmful|dangerous|poison|diarrh|nausea|"
-    r"vomit|upset stomach|headache|drows|sedat|surgery|immunosuppress",
+    r"vomit|upset stomach|headache|drows|sedat|surgery|immunosuppress|worsen|"
+    r"(talk|check) (with|to) (your|a|their) (health care provider|doctor|pharmacist)",
     re.I)
 # Sentences about use or efficacy name diseases too ("promoted for diabetes"); without a safety cue they are not
 # a caution.
 EFFICACY_WORDS = re.compile(
-    r"enough evidence to (determine|know|say|show|tell)|is promoted (as|for)|(has been|is) (used|in use)|"
-    r"traditionally used|may help|helpful for|effective (for|in)|studies (suggest|show|found)|"
-    r"research (suggests|shows)|benefit",
+    r"evidence to (determine|know|say|show|tell)|is promoted (as|for)|(has been|is) (used|in use)|"
+    r"traditionally used|may help|(useful|helpful|effective) (for|in)|whether .{0,80}(useful|helpful|effective|works)|"
+    r"studies (suggest|show|found)|research (suggests|shows)|benefit",
     re.I)
+# Reference-list lines on NIH pages ("Bethesda, MD: National Institute of Diabetes and Digestive and Kidney
+# Diseases; 2019.") name diseases but say nothing about the ingredient.
+CITATION = re.compile(
+    r"\b(Bethesda|Rockville|Silver Spring|Atlanta),? (MD|GA)\b|;\s*(19|20)\d\d\b|\bet al\b|\bdoi\b|\bPMID\b|"
+    r"\b(Accessed|Retrieved|Updated|Reviewed)( on)? [A-Z][a-z]+ \d|\bAvailable (at|from)\b|https?://",
+    re.I)
+
+
+def looks_like_citation(sentence: str) -> bool:
+    return bool(CITATION.search(sentence))
 
 
 def is_safety_statement(sentence: str) -> bool:
     """True for a sentence that states a safety concern, False for one that only mentions a disease while
-    talking about use or evidence of benefit."""
+    talking about use or evidence of benefit, and for reference-list lines."""
+    if looks_like_citation(sentence):
+        return False
     if SAFETY_CUES.search(sentence):
         return True
     return bool(SAFETY_WORDS.search(sentence)) and not EFFICACY_WORDS.search(sentence)
+
+
+def states_concern(sentence: str) -> bool:
+    """Stricter test for matching a sentence to a patient's condition: the disease name alone is what made the
+    sentence look relevant, so a real concern word (interacts, unsafe, avoid, side effect ...) must be there too."""
+    return not looks_like_citation(sentence) and bool(SAFETY_CUES.search(sentence))
 
 
 @dataclass

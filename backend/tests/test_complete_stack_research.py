@@ -328,6 +328,15 @@ def test_fact_sheet_bullets_are_separate_sentences():
     assert F.safety_sentences(text) == ["Ashwagandha might interact with thyroid hormone medicines and sedatives."]
 
 
+def test_fact_sheet_drops_citations_and_efficacy_lines():
+    assert not F.is_safety_statement("Bethesda, MD: National Institute of Diabetes and Digestive and Kidney Diseases; 2019.")
+    assert not F.is_safety_statement("There is not enough high-quality evidence to determine whether fenugreek is useful "
+                                     "for diabetes or menstrual cramps.")
+    assert F.is_safety_statement("Fenugreek may be unsafe for use during pregnancy.")
+    assert F.is_safety_statement("People with thyroid disease should talk with their health care provider first.")
+    assert not F.states_concern("Fenugreek seed is used for diabetes.") and F.states_concern("Avoid it in pregnancy.")
+
+
 def test_ods_falls_back_to_the_html_page_when_the_api_refuses(monkeypatch):
     import httpx
 

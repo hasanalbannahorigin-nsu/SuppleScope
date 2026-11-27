@@ -204,10 +204,14 @@ def test_patient_risk_ignores_sentences_that_only_name_the_disease(dossier):
     safety = ing.safety.model_copy(update={"disease_cautions": [
         DiseaseCaution(condition="diabetes", description="Today, fenugreek seed is promoted as a dietary supplement for "
                        "diabetes, menstrual cramps, and many other conditions.", finding_ids=[]),
+        DiseaseCaution(condition="diabetes", description="There is not enough high-quality evidence to determine whether "
+                       "fenugreek is useful for diabetes or menstrual cramps.", finding_ids=[]),
+        DiseaseCaution(condition="kidney disease", description="Bethesda, MD: National Institute of Diabetes and "
+                       "Digestive and Kidney Diseases; 2019.", finding_ids=[]),
         DiseaseCaution(condition="pregnancy", description="Fenugreek may be unsafe for use during pregnancy.",
                        finding_ids=[])]})
     d2 = dossier.model_copy(update={"ingredients": [ing.model_copy(update={"safety": safety}), *dossier.ingredients[1:]]})
-    found = [i for i in assess(d2, PatientProfile(conditions=["type 2 diabetes", "pregnant"])).items
+    found = [i for i in assess(d2, PatientProfile(conditions=["type 2 diabetes", "pregnant", "kidney disease"])).items
              if i.basis == "dossier_finding"]
     assert [i.factor for i in found] == ["pregnancy"]
 
