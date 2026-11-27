@@ -39,6 +39,13 @@ should do does did done have has had having also more most less least very over 
 any some study studies patients participants group groups results result conclusion conclusions background methods
 objective objectives aim aims""".split())
 _SPLIT = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9(\[])|\n+")
+_SENTENCE_GAP = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9(\[])")
+# A full stop after these is not a sentence end: initials, Latin plant-name authorities ("Withania somnifera
+# (L.) Dunal", "Rehmannia glutinosa (Gaertn.) DC.", "Libosch."), and common abbreviations.
+_ABBREV_END = re.compile(
+    r"(?:^|[\s(\[])(?:[A-Z]|DC|et al|e\.g|i\.e|vs|cf|Fig|Figs|No|Dr|St|sp|spp|var|subsp|ssp|cv|ca|approx"
+    r"|Gaertn|Thunb|Maxim|Willd|Benth|Hook|Lam|Juss|Mill|Roxb|Wall|Libosch|Blume|Merr|Nees|Burm|Kurz|Hassk|Pers"
+    r"|Spreng|Lindl|Mart|Desf|Bunge|Turcz|Franch|Sieb|Zucc|Wight|Arn|Skeels|Kuntze|Hemsl|Oliv|Moench|Hort)\.\)?$")
 _LABEL = re.compile(r"^(?:BACKGROUND|OBJECTIVES?|AIMS?|METHODS?|RESULTS?|CONCLUSIONS?|INTRODUCTION|DISCUSSION|"
                     r"FINDINGS|INTERPRETATION|PURPOSE|DESIGN|SETTING|PARTICIPANTS|INTERVENTIONS?|MEASUREMENTS?)\s*:\s*", re.I)
 _CAPS_LABEL = re.compile(r"^([A-Z][A-Z &/,-]{2,60}):\s+")  # any upper-case PubMed label, e.g. "AIM OF THE STUDY:"
@@ -83,7 +90,7 @@ _BACKGROUND = re.compile(
     r"\b(?:prevalence|incidence|worldwide|globally|global burden|epidemic)\b|\bglobal (?:incidence|prevalence)"
     r"|\bis an? (?:major|common|growing|serious|chronic|leading)\b|\b(?:has|have) (?:surged|grown|gained|attracted)\b"
     r"|\binterest in\b|\b(?:is|are|has been|have been) (?:widely|commonly|traditionally|frequently|extensively) used\b"
-    r"|\btraditional(?:ly)? (?:medicine|use|used)\b|\blittle is known\b|\bremains? (?:unclear|unknown|controversial)\b"
+    r"|\btraditional(?:ly)? (?:chinese |ayurvedic |folk |herbal )?(?:medicines?|use|used|remed(?:y|ies))\b|\blittle is known\b|\bremains? (?:unclear|unknown|controversial)\b"
     r"|\bsince ancient times\b|\bfor (?:centuries|thousands of years)\b|\b(?:has|have) been in use\b|\balso known as\b"
     r"|\b(?:increasing|growing) (?:amount|number|body) of\b", re.I)
 _METHODS = re.compile(
@@ -92,7 +99,8 @@ _METHODS = re.compile(
     r"|\bparticipants (?:received|took|were given)\b|\b(?:was|were) measured\b", re.I)
 _WEAK_RESULT = re.compile(
     r"\b(?:reduc(?:ed|tion)|decreas(?:ed|e)|lowered|improv(?:ed|ement)|increased|normali[sz]ed|restor(?:ed|es)|attenuat(?:ed|es)"
-    r"|compared (?:with|to)|versus|than (?:placebo|control))\b|\d(?:\.\d+)?\s*%", re.I)
+    r"|compared (?:with|to)|versus|than (?:placebo|control)|occurred|(?:was|were) observed|experienced"
+    r"|adverse (?:events?|effects?|reactions?)|well tolerated)\b|\d(?:\.\d+)?\s*%", re.I)
 
 
 @dataclass
@@ -121,11 +129,26 @@ def _section_role(label: str) -> str | None:
     return next((role for role, words in _SECTION_WORDS if any(w in up for w in words)), None)
 
 
+def _parts(text: str) -> list[str]:
+    """Lines, then sentences; a split right after an abbreviation or plant-name authority is undone."""
+    out = []
+    for line in re.split(r"\n+", text):
+        merged: list[str] = []
+        for piece in _SENTENCE_GAP.split(line):
+            prev = merged[-1].rstrip() if merged else ""
+            if prev and _ABBREV_END.search(prev) and not re.search(r"\bvitamins? [A-Z]\.$", prev, re.I):
+                merged[-1] = f"{merged[-1]} {piece}"
+            else:
+                merged.append(piece)
+        out.extend(merged)
+    return out
+
+
 def labelled_sentences(text: str, min_chars: int = 25, max_chars: int = 600) -> list[tuple[str, str | None]]:
     """(sentence, section role) pairs; the role comes from the abstract's section label, or None."""
     text = _HTML_TAG.sub(" ", _HTML_HEADING.sub(lambda m: f"\n{m.group(1).upper()}: ", text or ""))
     out, section = [], None
-    for part in _SPLIT.split(text):
+    for part in _parts(text):
         s = " ".join(part.split())
         m = _CAPS_LABEL.match(s) or _LABEL.match(s)
         if m:
@@ -150,8 +173,17 @@ def sentence_role(sentence: str, section: str | None = None, title: str = "") ->
     if title and n and n in _norm(title):
         return "title"
     strong = bool(_STRONG_RESULT.search(sentence))
-    if section == "conclusion" and not strong and _ADVICE.search(sentence):
-        return "advice"
+    if section in ("result", "conclusion"):
+        # review abstracts put background lines under RESULTS too ("X has been used since ancient times")
+        if strong:
+            return "result"
+        if _ADVICE.search(sentence):
+            return "advice"
+        if _BACKGROUND.search(sentence):
+            return "background"
+        if section == "result" and not (_WEAK_RESULT.search(sentence) or _CONCLUSION.search(sentence)):
+            return "other"
+        return section
     if section:
         return section
     if strong:

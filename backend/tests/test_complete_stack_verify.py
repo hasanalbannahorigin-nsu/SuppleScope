@@ -165,6 +165,27 @@ def test_one_outlying_cross_encoder_score_does_not_bury_findings():
     assert out[2].role == "background" and out[-1].role == "aim"
 
 
+def test_no_split_after_plant_name_authorities():
+    text = ("We compared Lycium barbarum L. (LJT) and Rehmannia glutinosa Libosch. (RGL) in diabetic mice for 4 weeks. "
+            "Rehmannia glutinosa (Gaertn.) DC. (RG) lowered blood glucose in diabetic mice. The mice were also given "
+            "vitamin C. They then rested for a week before the tests.")
+    got = sentences(text)
+    assert got[0].startswith("We compared Lycium barbarum L. (LJT) and Rehmannia glutinosa Libosch. (RGL)")
+    assert got[1].startswith("Rehmannia glutinosa (Gaertn.) DC. (RG) lowered")
+    assert not any(s.startswith("(") for s in got)
+    assert got[2:] == ["The mice were also given vitamin C.", "They then rested for a week before the tests."]
+
+
+def test_background_lines_under_a_results_label():
+    text = ("RESULTS: Rehmannia glutinosa has been widely used in the treatment of diabetes since ancient times. The active "
+            "ingredients studied most are Rehmannia polysaccharide and oligosaccharide. Fasting glucose fell by 20% in the "
+            "treated mice. Nausea occurred in two of the forty volunteers.")
+    roles = [sentence_role(s, sec) for s, sec in labelled_sentences(text)]
+    assert roles == ["background", "other", "result", "result"]
+    assert sentence_role("Prepared Rehmannia glutinosa is an anti-diabetic traditional Chinese medicine whose monomers "
+                         "exhibit antioxidant effects.") == "background"
+
+
 def test_at_most_two_sentences_per_study_before_others():
     out = SentenceSelector(mode="bm25", top_k=3).select("type 2 diabetes jambolan glucose", [JAMBOLAN, FENUGREEK])
     assert [x.doc_id for x in out].count("ev3") <= 2 and "ev4" in {x.doc_id for x in out}
