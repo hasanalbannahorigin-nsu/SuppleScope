@@ -197,6 +197,15 @@ def test_patient_risk_uses_dossier_findings(dossier):
     assert item.factor == "warfarin" and item.level == RiskLevel.MEDIUM
 
 
+def test_patient_risk_does_not_report_body_parts_as_unresearched(dossier):
+    extra = dossier.ingredients[0].model_copy(update={
+        "ingredient_id": "ing_ad_99", "name": "pancreatic beta cell", "standardized_name": "pancreatic beta cell",
+        "safety": dossier.ingredients[0].safety.model_copy(update={"status": ResearchStatus.NOT_SEARCHED})})
+    d2 = dossier.model_copy(update={"ingredients": [*dossier.ingredients, extra]})
+    rep = assess(d2, PatientProfile(medications=["Comet 500"]))
+    assert not any("pancreatic beta cell" in u for u in rep.unknowns)
+
+
 def test_patient_risk_ignores_sentences_that_only_name_the_disease(dossier):
     # NCCIH pages say "fenugreek is promoted for diabetes"; that is not a caution for a diabetic patient.
     from app.schemas.research.ingredient import DiseaseCaution

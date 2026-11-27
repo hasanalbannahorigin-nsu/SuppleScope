@@ -56,6 +56,7 @@ from app.schemas.research.product import (
     IdentityStatus,
     ProductResearch,
 )
+from app.services.knowledge.normalise import not_an_ingredient
 from app.services.research_agent import prompts as P
 from app.services.research_agent.budget import BudgetExhausted
 from app.services.research_agent.product_phase import core_product_name, script_of
@@ -240,6 +241,8 @@ class EvidencePhases:
         if self.identity_ok:
             official_values = {c.value for c in OFFICIAL_CLASSES}
             for ci in self.product.composition.ingredients:
+                if self._not_an_ingredient(ci.standardized_name or ci.name, ci.name):
+                    continue
                 official = ci.information_class in official_values
                 origin = ("AD_AND_OFFICIAL" if ci.ad_mention_id and official else
                           "OFFICIAL_ONLY" if official else "THIRD_PARTY_ONLY")
@@ -250,7 +253,7 @@ class EvidencePhases:
         taken = {i.ingredient_id for i in out}
         n = 0
         for m in self.ad.ingredients:
-            if m.mention_id in used_mentions:
+            if m.mention_id in used_mentions or self._not_an_ingredient(m.name_en or m.name_original, m.name_original):
                 continue
             if self.norm is not None and any(self.norm.same_ingredient(m.name_en or m.name_original, i.standardized_name or i.name)
                                              or self.norm.same_ingredient(m.name_original, i.name) for i in out):
@@ -260,6 +263,14 @@ class EvidencePhases:
                 n += 1
             out.append(_Ing(f"ing_ad_{n:02d}", m.name_original, m.name_en, "AD_ONLY", m.amount))
         return out
+
+    def _not_an_ingredient(self, *names: str | None) -> bool:
+        """A body part or body function listed as an ingredient (e.g. "pancreatic beta cell" from a claim)."""
+        if not not_an_ingredient(*names):
+            return False
+        self.s.add_log("ingredient", "validate", tool="ingredient_name_check", query=next(n for n in names if n),
+                       error="skipped: a body part or body function, not an ingredient")
+        return True
 
     # ---- planning ------------------------------------------------------------------------------
 

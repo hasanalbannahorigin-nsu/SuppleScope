@@ -33,7 +33,7 @@ from app.schemas.research.patient_risk import (
     RiskLevel,
 )
 from app.services.knowledge.factsheets import states_concern
-from app.services.knowledge.normalise import default_normaliser
+from app.services.knowledge.normalise import default_normaliser, not_an_ingredient
 
 DATA = Path(__file__).resolve().parent / "data"
 ENGINE_VERSION = "1.0"
@@ -268,6 +268,8 @@ def assess(d: ResearchDossierV2, patient: PatientProfile, *, rxnorm=None) -> Pat
     if not ings:
         unknowns.append("The product's ingredients are unknown (no confirmed label and none listed in the ad).")
     for ing in d.ingredients:
+        if not_an_ingredient(ing.standardized_name, ing.name):
+            continue  # e.g. "pancreatic beta cell" taken from a claim by an older research run
         if ing.safety.status.value == "NOT_SEARCHED" and not any(i.ingredient_id == ing.ingredient_id for i in items):
             unknowns.append(f"Safety of '{ing.standardized_name or ing.name}' was not researched (limit reached).")
     if d.product.identity.status.value not in ("VERIFIED", "PROBABLE"):

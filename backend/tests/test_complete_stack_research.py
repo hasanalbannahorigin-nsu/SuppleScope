@@ -328,6 +328,16 @@ def test_fact_sheet_bullets_are_separate_sentences():
     assert F.safety_sentences(text) == ["Ashwagandha might interact with thyroid hormone medicines and sedatives."]
 
 
+def test_body_parts_are_not_ingredients():
+    from app.services.knowledge.normalise import looks_like_body_part, not_an_ingredient
+    for name in ("pancreatic beta cell", "Pancreatic beta-cells", "blood sugar level", "insulin sensitivity", "liver"):
+        assert looks_like_body_part(name), name
+    for name in ("cod liver oil", "beef liver", "pancreatin", "glucose", "insulin", "Fenugreek", "জাম বিচি", ""):
+        assert not looks_like_body_part(name), name
+    assert not_an_ingredient("pancreatic beta cell", "অগ্ন্যাশয়ের বিটা কোষ")
+    assert not not_an_ingredient("pancreas", "Bovine pancreas") and not not_an_ingredient(None, "মেথি")
+
+
 def test_fact_sheet_drops_citations_and_efficacy_lines():
     assert not F.is_safety_statement("Bethesda, MD: National Institute of Diabetes and Digestive and Kidney Diseases; 2019.")
     assert not F.is_safety_statement("There is not enough high-quality evidence to determine whether fenugreek is useful "

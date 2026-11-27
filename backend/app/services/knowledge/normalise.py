@@ -77,6 +77,37 @@ def load_dictionary(path: str | Path | None = None) -> list[DictEntry]:
     return out
 
 
+# Words for body parts and body functions. A "name" made only of these ("pancreatic beta cell", "blood sugar
+# level", "insulin sensitivity") is something a claim talks about, not an ingredient; real ingredients that use
+# such words always carry another word ("cod liver oil", "beef liver", "pancreatin").
+BODY_WORDS = {
+    "pancreas", "pancreatic", "beta", "cell", "cells", "islet", "islets", "insulin", "receptor", "receptors", "liver",
+    "kidney", "kidneys", "renal", "blood", "level", "levels", "pressure", "heart", "brain", "nerve", "nerves", "immune",
+    "immunity", "system", "metabolism", "tissue", "tissues", "organ", "organs", "function", "health", "body",
+    "hormone", "hormones", "sensitivity", "resistance", "production", "secretion", "circulation", "digestion",
+    "sugar", "glucose", "cholesterol", "the", "of", "and",
+}
+SUBSTANCE_ALONE = {"sugar", "glucose", "insulin"}  # a one-word name that may be a real label entry
+
+
+def looks_like_body_part(name: str | None) -> bool:
+    """True for names like "pancreatic beta cell" or "blood sugar level" that extraction sometimes lists as an
+    ingredient. Bangla names are left alone (the dictionary handles them)."""
+    words = re.findall(r"[a-z]+", (name or "").lower())
+    if not words or not (name or "").isascii():
+        return False
+    if len(words) == 1 and words[0] in SUBSTANCE_ALONE:
+        return False
+    return all(w in BODY_WORDS for w in words)
+
+
+def not_an_ingredient(*names: str | None) -> bool:
+    """All Latin-script names of one entry are body parts or body functions. Bangla names are judged by their
+    English form, and "Bovine pancreas" stays because one of its words is a real substance."""
+    latin = [n for n in names if n and n.isascii()]
+    return bool(latin) and all(looks_like_body_part(n) for n in latin)
+
+
 def split_form(name: str) -> tuple[str, str | None]:
     forms = [m.group(1) for m in _FORM_RE.finditer(" " + name + " ")]
     core = _FORM_RE.sub(" ", " " + name + " ")
