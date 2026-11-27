@@ -56,7 +56,8 @@ The Report page has two new tabs, **Claim Verification** and **Patient Risk**. D
 3. **Train the verifier.** Open `backend/verifier_training/SuppleScope_verifier_training.ipynb` in Colab or Kaggle (T4 GPU),
    run all cells, download `verifier_models.zip`, unzip into `backend/models/` and set
    `VERIFIER_MODEL_DIRS=models/verifier-roberta,models/verifier-pubmedbert`. Until then the verifier runs in rules mode.
-4. **Label claims.** Export VerifierInput JSONL for each ad, `python -m labelling.export_tasks ...`, label in Label Studio
+4. **Label claims.** `python scripts/export_verifier_inputs.py eval/verifier_input_all.jsonl --dossiers eval/out/<run>`
+   (or without `--dossiers` to read the website database), then `python -m labelling.export_tasks ...`, label in Label Studio
    with `labelling/label_studio_config.xml` (two annotators), import with `python -m labelling.import_annotations ...`.
    That gold file feeds training and `python -m verifier_training.evaluate`.
 5. **Pharmacist review.** `services/patient_risk/data/interaction_rules.csv` and `bd_brand_generic.csv` are starter tables;

@@ -17,3 +17,4 @@ backend/data/verifier/
 backend/models/
 backend/eval/verifier_gold.jsonl
 backend/eval/label_studio_tasks.json
+backend/eval/verifier_input_all.jsonl

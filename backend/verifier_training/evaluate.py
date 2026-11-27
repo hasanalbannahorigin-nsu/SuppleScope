@@ -1,6 +1,6 @@
 """Evaluate claim verifiers on SuppleScope's labelled claims and print the ablation table.
 
-Input: JSONL of VerifierInput records with "gold_label" (made by labelling/import_label_studio.py).
+Input: JSONL of VerifierInput records with "gold_label" (made by labelling/import_annotations.py).
   python -m verifier_training.evaluate --gold eval/verifier_gold.jsonl \
       --modes rules,ensemble,ensemble+rules,llm_baseline,llm_baseline+rules --out eval/out/verifier_eval.json
 `ensemble*` modes need VERIFIER_MODEL_DIRS; `llm_baseline*` modes need LLM_API_KEY (free Gemini works).

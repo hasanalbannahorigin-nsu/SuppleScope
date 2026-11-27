@@ -118,3 +118,18 @@ def test_faster_whisper_uses_cached_model_and_language(monkeypatch, tmp_path):
     assert made == [("medium", "cpu", "int8")]  # loaded once
     assert r1.language == "bn" and r1.full_text == "সুগার কমে"
     speech._whisper_model.cache_clear()
+
+
+def test_export_verifier_inputs_from_dossier_folder(tmp_path):
+    import importlib.util
+    from pathlib import Path
+
+    spec = importlib.util.spec_from_file_location(
+        "export_verifier_inputs", Path(__file__).resolve().parents[1] / "scripts" / "export_verifier_inputs.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    (tmp_path / "r03_dibedex_dossier.json").write_text(_full_run().model_dump_json(), encoding="utf-8")
+    out = tmp_path / "eval" / "verifier_input_all.jsonl"
+    n = mod.write_inputs(mod.dossiers_from_folders([str(tmp_path)]), out)
+    rows = [VerifierInput.model_validate_json(line) for line in out.read_text(encoding="utf-8").splitlines()]
+    assert n == len(rows) == len(_inputs()) and to_task(rows[0])["data"]["claim_en"] == "helps control sugar level"
