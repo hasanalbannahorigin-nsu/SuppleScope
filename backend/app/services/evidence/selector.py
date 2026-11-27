@@ -96,6 +96,7 @@ _BACKGROUND = re.compile(
 _METHODS = re.compile(
     r"\bwere randomi[sz]ed\b|\brandomly (?:assigned|allocated)\b|\bwere (?:enrolled|recruited|included|allocated|assigned|divided)\b"
     r"|\b(?:we|were) searched\b|\bdatabases? (?:were|was) searched\b|\bdata were (?:extracted|analy[sz]ed|pooled)\b"
+    r"|\b(?:literature|systematic|electronic|database) search(?:es)? (?:was|were) (?:carried out|conducted|performed|done)\b"
     r"|\bparticipants (?:received|took|were given)\b|\b(?:was|were) measured\b", re.I)
 _WEAK_RESULT = re.compile(
     r"\b(?:reduc(?:ed|tion)|decreas(?:ed|e)|lowered|improv(?:ed|ement)|increased|normali[sz]ed|restor(?:ed|es)|attenuat(?:ed|es)"

@@ -140,7 +140,12 @@ class EnsembleVerifier:
                 d = G.decide(vi, p)
                 final, note = G.apply_caps(label, d)
                 abstained = d.abstained
-                rationale = (d.rationale if d.final else rationale + " " + d.rationale) + (f" ({note})" if note else "")
+                if d.final and not abstained and label != d.label:  # keep the overruled vote visible
+                    rationale = (f"{d.rationale} The models voted {label.value} (mean probability "
+                                 f"{probs.get(label, 0):.2f}); the evidence rule overrules that.")
+                else:
+                    rationale = d.rationale if d.final else rationale + " " + d.rationale
+                rationale += f" ({note})" if note else ""
                 if abstained:  # no verdict, so no confidence (the models' probabilities stay in label_probabilities)
                     confidence = None
                 elif final != label:  # the rule chose this label: the models' probability for it means nothing

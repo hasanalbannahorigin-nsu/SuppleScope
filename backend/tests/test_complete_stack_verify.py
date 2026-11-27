@@ -265,6 +265,24 @@ def test_confidence_comes_from_whoever_chose_the_label(inputs):
     assert RuleVerifier().verify([stopped])[0].confidence is None
 
 
+def test_overruled_model_vote_is_shown(inputs):
+    # laptop 2026-11-28, "Diabetes is cured": the rule decided and the models' vote was not visible
+    context = EnsembleVerifier([_Model("a", S), _Model("b", S)]).verify([inputs["c02"]])[0]
+    assert context.label == I
+    assert "did not measure the claimed effect itself" in context.rationale
+    assert "The models voted SUPPORTED (mean probability 0.80); the evidence rule overrules that." in context.rationale
+    agree = EnsembleVerifier([_Model("a", I)]).verify([inputs["c02"]])[0]
+    assert "voted" not in agree.rationale
+
+
+def test_literature_search_sentence_is_methods():
+    from app.services.evidence.selector import sentence_role
+
+    assert sentence_role("An electronic literature search was carried out in the PubMed, Google Scholar, Scopus, and "
+                         "Cochrane Library databases through 18 November 2022 to find trials that assessed fasting "
+                         "blood glucose.") == "methods"
+
+
 class _Llm:
     model = "fake-gemini"
 

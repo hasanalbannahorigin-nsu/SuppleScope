@@ -106,7 +106,7 @@ def decide(vi: VerifierInput, p: EvidenceProfile | None = None) -> RuleDecision:
                             f"No verdict is possible because {why}.", 0.5, abstained=True)
     if p.grade in "DEF":
         why = {"D": "only animal or cell studies measured this effect",
-               "E": "the studies found are background only and did not measure the claimed effect",
+               "E": "the studies found did not measure the claimed effect itself (background, or a related outcome only)",
                "F": "no study linked to this claim was found"}[p.grade]
         return RuleDecision(VerdictLabel.INSUFFICIENT_EVIDENCE, True, [VerdictLabel.INSUFFICIENT_EVIDENCE],
                             f"Insufficient evidence: {why}.", 0.8 if p.grade == "F" else 0.7)
