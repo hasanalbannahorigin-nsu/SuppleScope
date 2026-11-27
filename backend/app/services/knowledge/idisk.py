@@ -138,7 +138,10 @@ def guess_map(path: Path) -> FileMap:
     etype = TYPE_BY_STEM.get(stem) or next((v for k, v in TYPE_BY_STEM.items() if stem.startswith(k)), stem.upper())
     id_col = _pick(headers, ID_COLS) or _pick(headers, ("_id", "cui"), contains=True) or (headers[0] if headers else None)
     name_col = _pick(headers, NAME_COLS) or _pick(headers, ("name", "term"), contains=True)
-    syn = [h for h in headers if h not in (id_col, name_col) and any(x in _norm(h) for x in SYN_HINTS)]
+    # Synonyms: "Common Names" plus the per-source names of iDISK2.0 (NHP_Name, DSLD_Name, MSKCC_Name, NM_Name),
+    # which hold the everyday English names ("Fenugreek") next to the scientific Name; never Company_Name.
+    syn = [h for h in headers if h not in (id_col, name_col) and not _norm(h).startswith("company")
+           and (any(x in _norm(h) for x in SYN_HINTS) or _norm(h).endswith("_name"))]
     text = [h for h in headers if h not in (id_col, name_col, *syn) and any(x in _norm(h) for x in TEXT_HINTS)]
     return FileMap(path=str(path), kind="entities", entity_type=etype, id_col=id_col, name_col=name_col,
                    synonym_cols=syn, text_cols=text, headers=headers)
@@ -223,7 +226,9 @@ def _split_names(value: str) -> list[str]:
             return [str(x).strip() for x in json.loads(value) if str(x).strip()]
         except ValueError:
             value = value.strip("[]")
-    return [x.strip(" '\"") for x in re.split(r"\s*[|;]\s*", value) if x.strip(" '\"")]
+    # "|" and ";" separate names, and so does ", " ("Fenugreek, Greek hay"); a comma without a space stays, as in
+    # chemical names ("1,3-dimethylamylamine").
+    return [x.strip(" '\"") for x in re.split(r"\s*[|;]\s*|,\s+", value) if x.strip(" '\"")]
 
 
 def build_database(folder: str | Path, db_path: str | Path, overrides: dict | None = None) -> dict:

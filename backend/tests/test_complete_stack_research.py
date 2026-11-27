@@ -300,11 +300,15 @@ def _idisk2_release(tmp_path):
     rel.mkdir(parents=True)
     (ent / "README.md").write_text("readme")
     (ent / "DSI.csv").write_text(
-        "iDISK_ID,Name,CUI,Background,Safety,Mechanism of action,Source Material\n"
+        "iDISK_ID,Name,CUI,Background,Safety,Mechanism of action,Source Material,Common Names,NHP_Name,DSLD_Name,"
+        "MSKCC_Name,NM_Name\n"
         'DSI000101,Trigonella foenum-graecum,C0331707,Fenugreek is a herb.,"Fenugreek may lower blood sugar too much when '
-        'taken with diabetes medicines. It should be avoided during pregnancy. It is a member of the pea family.",x,seed\n'
-        "DSI000102,Selenium,C0036581,Selenium is a mineral.,,,\n", encoding="utf-8")
-    (ent / "DSP.csv").write_text("iDISK_ID,Name,CUI,Company Name\nDSP000001,Fenugreek,,Acme\n", encoding="utf-8")
+        'taken with diabetes medicines. It should be avoided during pregnancy. It is a member of the pea family.",x,seed,'
+        '"Greek hay, Methi; Bird\'s foot",,Fenugreek seed,Fenugreek,\n'
+        "DSI000102,Selenium,C0036581,Selenium is a mineral.,,,,,,,,\n"
+        "DSI000103,\"1,3-Dimethylamylamine\",,,,,,,,,,\n", encoding="utf-8")
+    (ent / "DSP.csv").write_text("iDISK_ID,Name,Company_Name,Company_Address,Status,NHP_ID,DSLD_ID,Purpose,Risk\n"
+                                 "DSP000001,Fenugreek,Acme Herbals,,,,,,\n", encoding="utf-8")
     (ent / "D.csv").write_text("iDISK_ID,Name,CUI\nD000001,Antidiabetic drugs,C0935929\n", encoding="utf-8")
     (ent / "Dis.csv").write_text("iDISK_ID,Name,CUI\nDis000001,Diabetes,C0011849\n", encoding="utf-8")
     long_desc = "Fenugreek may have additive hypoglycemic effects with antidiabetic drugs. " * 12
@@ -322,7 +326,8 @@ def test_idisk2_release_layout(tmp_path):
     maps = {Path(m.path).name: m for m in discover(folder)}
     assert maps["DSI.csv"].id_col == "iDISK_ID" and maps["DSI.csv"].entity_type == "DSI"
     assert maps["D.csv"].entity_type == "Drug" and maps["Dis.csv"].entity_type == "Disease"
-    assert "Safety" in maps["DSI.csv"].text_cols
+    assert "Safety" in maps["DSI.csv"].text_cols and maps["DSP.csv"].synonym_cols == []  # never Company_Name
+    assert maps["DSI.csv"].synonym_cols == ["Common Names", "NHP_Name", "DSLD_Name", "MSKCC_Name", "NM_Name"]
     d = maps["dsi_d.csv"]
     assert (d.kind, d.start_col, d.rel_col, d.end_col) == ("relations", "DSI", "Relation", "D")  # not "Source"
     assert (maps["dsp_dsi.csv"].start_col, maps["dsp_dsi.csv"].end_col) == ("DSP", "DSI")
@@ -331,6 +336,9 @@ def test_idisk2_release_layout(tmp_path):
     store = IdiskStore(tmp_path / "idisk.sqlite")
     m = store.match(["fenugreek", "Trigonella foenum-graecum"])
     assert m.entity_id == "DSI000101"  # the ingredient, never the product called "Fenugreek"
+    assert store.match(["Methi"]).entity_id == "DSI000101" and store.match(["Greek hay"]).entity_id == "DSI000101"
+    assert store.match(["1,3-dimethylamylamine"]).entity_id == "DSI000103"
+    assert store.match(["Acme Herbals"]) is None
     facts = store.facts(m.entity_id)
     inter = next(f for f in facts if f.kind == "interaction")
     assert inter.value == "Antidiabetic drugs" and "Interaction Rating: Moderate" in inter.text
