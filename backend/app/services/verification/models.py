@@ -109,8 +109,9 @@ class RuleVerifier:
         for vi in inputs:
             p = G.profile(vi)
             d = G.decide(vi, p)
-            out.append(_output(vi, d.label, confidence=d.confidence, rationale=d.rationale, model_name=self.name,
-                               model_version=RULES_VERSION, evidence_ids=p.evidence_ids, abstained=d.abstained))
+            out.append(_output(vi, d.label, confidence=None if d.abstained else d.confidence, rationale=d.rationale,
+                               model_name=self.name, model_version=RULES_VERSION, evidence_ids=p.evidence_ids,
+                               abstained=d.abstained))
         return out
 
 
@@ -134,14 +135,18 @@ class EnsembleVerifier:
             label, probs = vote([pm[i] for pm in per_model])
             p = G.profile(vi)
             rationale = f"Model vote: {label.value} (mean probability {probs.get(label, 0):.2f})."
-            abstained = False
+            abstained, confidence = False, probs.get(label)
             if self.apply_rules:
                 d = G.decide(vi, p)
                 final, note = G.apply_caps(label, d)
                 abstained = d.abstained
                 rationale = (d.rationale if d.final else rationale + " " + d.rationale) + (f" ({note})" if note else "")
+                if abstained:  # no verdict, so no confidence (the models' probabilities stay in label_probabilities)
+                    confidence = None
+                elif final != label:  # the rule chose this label: the models' probability for it means nothing
+                    confidence = d.confidence
                 label = final
-            out.append(_output(vi, label, confidence=probs.get(label), rationale=rationale, model_name=self.name,
+            out.append(_output(vi, label, confidence=confidence, rationale=rationale, model_name=self.name,
                                model_version=self.version, probs=probs, evidence_ids=p.evidence_ids, abstained=abstained))
         return out
 

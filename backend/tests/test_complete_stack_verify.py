@@ -252,6 +252,19 @@ def test_ensemble_vote_is_capped_by_evidence_type(inputs):
     assert raw.label == S
 
 
+def test_confidence_comes_from_whoever_chose_the_label(inputs):
+    # laptop 2026-11-28: an abstained claim showed "confidence 3%", the models' probability for a label the rule set
+    ens = EnsembleVerifier([_Model("a", S, p=0.97), _Model("b", S, p=0.97)])
+    stopped = inputs["c01"].model_copy(update={"evidence_links": [], "claim_research_status": ResearchStatus.NOT_SEARCHED})
+    capped, context, abstained = ens.verify([inputs["c01"], inputs["c02"], stopped])
+    assert abstained.abstained and abstained.confidence is None and abstained.label_probabilities
+    assert capped.label == P and capped.confidence == G.decide(inputs["c01"]).confidence  # rule cap, rule confidence
+    assert context.label == I and context.confidence == 0.7
+    agree = EnsembleVerifier([_Model("a", P, p=0.6)]).verify([inputs["c01"]])[0]
+    assert agree.label == P and agree.confidence == 0.6  # the models' own label keeps their probability
+    assert RuleVerifier().verify([stopped])[0].confidence is None
+
+
 class _Llm:
     model = "fake-gemini"
 
