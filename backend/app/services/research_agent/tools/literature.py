@@ -1,4 +1,11 @@
-"""PubMed (esearch + efetch with abstracts) and Europe PMC (core results with abstracts)."""
+"""PubMed (esearch + efetch with abstracts), Europe PMC (core results with abstracts) and the
+ClinicalTrials.gov registry (API v2), all returned as Paper records.
+
+PubMed effect searches can be limited to the strongest study designs with PUBMED_STUDY_FILTER
+(Behnamian et al. 2026 filtered PubMed to reviews, RCTs and meta-analyses). Registry records are
+kept apart by provider == "clinicaltrials": they describe a registered trial, not its findings,
+unless the registry says results were posted.
+"""
 from __future__ import annotations
 
 import xml.etree.ElementTree as ET
@@ -21,6 +28,8 @@ class Paper:
     publication_types: list[str] = field(default_factory=list)
     url: str | None = None
     provider: str = ""
+    nct_id: str | None = None
+    has_results: bool | None = None
 
 
 def _ncbi_params() -> dict:
@@ -93,6 +102,63 @@ def europepmc_search(query: str, page_size: int = 8) -> list[Paper]:
     return out
 
 
+PUBMED_STUDY_FILTER = ("(randomized controlled trial[pt] OR meta-analysis[pt] OR systematic review[pt] "
+                       "OR clinical trial[pt] OR review[pt])")
+REGISTRY_PROVIDER = "clinicaltrials"
+
+
+def with_study_filter(provider: str, query: str) -> str | None:
+    """The same query limited to reviews, trials and meta-analyses; None when the provider has no such filter."""
+    if provider == "pubmed":
+        return f"({query}) AND {PUBMED_STUDY_FILTER}"
+    return None
+
+
+def clinicaltrials_search(query: str, retmax: int = 3) -> list[Paper]:
+    """ClinicalTrials.gov API v2 /studies; each study becomes a Paper whose 'abstract' is the registry summary."""
+    payload = get_json("https://clinicaltrials.gov/api/v2/studies",
+                       params={"query.term": query, "pageSize": retmax, "format": "json"})
+    return parse_clinicaltrials(payload)
+
+
+def parse_clinicaltrials(payload: dict) -> list[Paper]:
+    out = []
+    for study in (payload or {}).get("studies", []) or []:
+        proto = study.get("protocolSection") or {}
+        ident = proto.get("identificationModule") or {}
+        nct = ident.get("nctId")
+        if not nct:
+            continue
+        status = proto.get("statusModule") or {}
+        design = proto.get("designModule") or {}
+        desc = proto.get("descriptionModule") or {}
+        cond = (proto.get("conditionsModule") or {}).get("conditions") or []
+        arms = (proto.get("armsInterventionsModule") or {}).get("interventions") or []
+        enrol = (design.get("enrollmentInfo") or {}).get("count")
+        allocation = ((design.get("designInfo") or {}).get("allocation") or "").replace("_", " ").lower()
+        has_results = bool(study.get("hasResults"))
+        start = ((status.get("startDateStruct") or {}).get("date") or "")[:4]
+        lines = [
+            f"Registered trial {nct}.",
+            f"Overall status: {status.get('overallStatus') or 'unknown'}.",
+            f"Study type: {design.get('studyType') or 'unknown'}" + (f", allocation {allocation}" if allocation else "") + ".",
+            f"Phases: {', '.join(design.get('phases') or []) or 'not given'}.",
+            f"Enrollment: {enrol if enrol is not None else 'not given'}.",
+            f"Conditions: {', '.join(cond) or 'not given'}.",
+            "Interventions: " + ("; ".join(f"{i.get('type', '')} {i.get('name', '')}".strip() for i in arms) or "not given") + ".",
+            f"Results posted on the registry: {'yes' if has_results else 'no'}.",
+        ]
+        if desc.get("briefSummary"):
+            lines.append("Summary: " + " ".join(desc["briefSummary"].split()))
+        out.append(Paper(
+            title=(ident.get("briefTitle") or ident.get("officialTitle") or nct).strip(),
+            abstract="\n".join(lines), year=int(start) if start.isdigit() else None,
+            publication_types=["Registered clinical trial"] + (["Results posted"] if has_results else []),
+            url=f"https://clinicaltrials.gov/study/{nct}", provider=REGISTRY_PROVIDER, nct_id=nct, has_results=has_results,
+        ))
+    return out
+
+
 def paper_to_json(p: Paper) -> dict:
     return asdict(p)
 
@@ -101,9 +167,10 @@ def paper_from_json(d: dict) -> Paper:
     return Paper(**d)
 
 
-LITERATURE_SEARCH = {"pubmed": pubmed_search, "europepmc": europepmc_search}
+LITERATURE_SEARCH = {"pubmed": pubmed_search, "europepmc": europepmc_search, REGISTRY_PROVIDER: clinicaltrials_search}
 
 
 def literature_providers_from_settings() -> list[str]:
     names = [n.strip().lower() for n in (get_settings().research_literature_providers or "").split(",") if n.strip()]
-    return [n for n in names if n in LITERATURE_SEARCH] or ["pubmed"]
+    # The registry is searched separately (RESEARCH_TRIAL_REGISTRY), never as a fallback for papers.
+    return [n for n in names if n in LITERATURE_SEARCH and n != REGISTRY_PROVIDER] or ["pubmed"]

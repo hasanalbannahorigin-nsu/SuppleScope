@@ -5,6 +5,7 @@ from pathlib import Path
 
 from app.config import get_settings
 from app.services.ocr.base import OcrOutput, OcrProvider
+from app.services.ocr.easyocr_provider import EasyOcrProvider
 from app.services.ocr.google_vision_provider import GoogleVisionOcrProvider
 from app.services.ocr.tesseract_provider import TesseractOcrProvider
 
@@ -13,6 +14,7 @@ logger = logging.getLogger(__name__)
 PROVIDERS: dict[str, type[OcrProvider]] = {
     "google_vision": GoogleVisionOcrProvider,
     "tesseract": TesseractOcrProvider,
+    "easyocr": EasyOcrProvider,
 }
 
 

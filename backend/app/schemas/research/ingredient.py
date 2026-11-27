@@ -42,6 +42,18 @@ class IngredientSafety(Strict):
     disease_cautions: list[DiseaseCaution] = Field(default_factory=list)
 
 
+class KnowledgeLink(Strict):
+    """Where the ingredient was matched in a dictionary or reference database (name normalisation)."""
+
+    database: str = Field(description="'SuppleScope dictionary', 'iDISK2.0', 'NIH ODS', 'NCCIH'")
+    entity_id: str | None = Field(None, description="Id in that database, e.g. an iDISK2.0 DSI id")
+    matched_name: str
+    match_score: float | None = Field(None, description="0-100; 100 = exact name match")
+    method: str = Field("exact", description="'exact', 'fuzzy' or 'lookup'")
+    url: str | None = None
+    source_id: str | None = None
+
+
 class IngredientResearch(Strict):
     ingredient_id: str = Field(description="Matches ComposedIngredient.ingredient_id")
     name: str
@@ -57,4 +69,8 @@ class IngredientResearch(Strict):
     tested_dose_range: str | None = Field(None, description="Range of doses used in the linked human studies, as reported")
     safety: IngredientSafety
     queries_tried: list[str] = Field(default_factory=list)
+    knowledge_links: list[KnowledgeLink] = Field(default_factory=list,
+                                                 description="Dictionary / iDISK2.0 / fact-sheet matches of this ingredient")
+    reference_finding_ids: list[str] = Field(default_factory=list,
+                                             description="Findings (class REFERENCE) from iDISK2.0, NIH ODS, NCCIH and drug labels")
     notes: str | None = None

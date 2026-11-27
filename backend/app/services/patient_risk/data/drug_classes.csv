@@ -1,0 +1,87 @@
+generic,classes
+warfarin,anticoagulant
+acenocoumarol,anticoagulant
+heparin,anticoagulant
+enoxaparin,anticoagulant
+rivaroxaban,anticoagulant
+apixaban,anticoagulant
+dabigatran,anticoagulant
+aspirin,antiplatelet
+clopidogrel,antiplatelet
+ticagrelor,antiplatelet
+insulin,antidiabetic|insulin
+insulin glargine,antidiabetic|insulin
+metformin,antidiabetic
+glibenclamide,antidiabetic|sulfonylurea
+gliclazide,antidiabetic|sulfonylurea
+glimepiride,antidiabetic|sulfonylurea
+glipizide,antidiabetic|sulfonylurea
+sitagliptin,antidiabetic
+vildagliptin,antidiabetic
+linagliptin,antidiabetic
+empagliflozin,antidiabetic
+dapagliflozin,antidiabetic
+pioglitazone,antidiabetic
+levothyroxine,thyroid hormone
+carbimazole,antithyroid
+methimazole,antithyroid
+propylthiouracil,antithyroid
+amlodipine,antihypertensive
+losartan,antihypertensive|arb
+valsartan,antihypertensive|arb
+telmisartan,antihypertensive|arb
+olmesartan,antihypertensive|arb
+enalapril,antihypertensive|ace inhibitor
+lisinopril,antihypertensive|ace inhibitor
+ramipril,antihypertensive|ace inhibitor
+atenolol,antihypertensive|beta blocker
+bisoprolol,antihypertensive|beta blocker
+metoprolol,antihypertensive|beta blocker
+propranolol,antihypertensive|beta blocker
+hydrochlorothiazide,antihypertensive|diuretic|thiazide diuretic
+indapamide,antihypertensive|diuretic|thiazide diuretic
+furosemide,diuretic
+spironolactone,diuretic|potassium-sparing diuretic
+amiloride,diuretic|potassium-sparing diuretic
+digoxin,digoxin
+ciprofloxacin,antibiotic|quinolone
+levofloxacin,antibiotic|quinolone
+moxifloxacin,antibiotic|quinolone
+doxycycline,antibiotic|tetracycline
+tetracycline,antibiotic|tetracycline
+azithromycin,antibiotic
+metronidazole,antibiotic
+alendronate,bisphosphonate
+risedronate,bisphosphonate
+ibandronate,bisphosphonate
+omeprazole,proton pump inhibitor
+esomeprazole,proton pump inhibitor
+pantoprazole,proton pump inhibitor
+rabeprazole,proton pump inhibitor
+lansoprazole,proton pump inhibitor
+clonazepam,sedative|benzodiazepine
+diazepam,sedative|benzodiazepine
+alprazolam,sedative|benzodiazepine
+lorazepam,sedative|benzodiazepine
+sertraline,antidepressant
+fluoxetine,antidepressant
+escitalopram,antidepressant
+amitriptyline,antidepressant
+cyclosporine,immunosuppressant
+tacrolimus,immunosuppressant
+mycophenolate,immunosuppressant
+azathioprine,immunosuppressant
+prednisolone,corticosteroid|immunosuppressant
+atorvastatin,statin
+rosuvastatin,statin
+simvastatin,statin
+levodopa,levodopa
+penicillamine,penicillamine
+orlistat,orlistat
+ethinylestradiol,oral contraceptive
+levonorgestrel,oral contraceptive
+lithium,lithium
+paracetamol,analgesic
+cetirizine,antihistamine
+fexofenadine,antihistamine
+montelukast,antiasthmatic

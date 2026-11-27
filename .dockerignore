@@ -1,0 +1,15 @@
+**/.env
+**/.env.*
+!.env.example
+**/node_modules
+**/dist
+**/__pycache__
+**/*.pyc
+backend/data
+data
+backend/models
+backend/eval/out
+backend/supplescope.db
+**/.pytest_cache
+.git
+Images

@@ -12,10 +12,12 @@ import uuid
 from app.config import get_settings
 from app.schemas.research.ad_extraction import AdExtraction
 from app.schemas.research.dossier import AgentInfo, ResearchDossierV2, SafetySummary
+from app.services.evidence.selector import SentenceSelector
 from app.services.llm.client import JsonLlm, llm_from_settings
 from app.services.research_agent.budget import Budget
 from app.services.research_agent.evidence_phase import EvidencePhases
 from app.services.research_agent.product_phase import ProductPhase
+from app.services.research_agent.reference_phase import ReferencePhase
 from app.services.research_agent.state import ResearchState, now
 from app.services.research_agent.tools.cache import DiskCache, NullCache
 from app.services.research_agent.tools.literature import literature_providers_from_settings
@@ -23,7 +25,7 @@ from app.services.research_agent.tools.search import SearchProvider, provider_fr
 
 logger = logging.getLogger(__name__)
 
-AGENT_VERSION = "0.2.0-milestone2"
+AGENT_VERSION = "0.3.0-complete-stack"
 
 
 def run_research(
@@ -36,6 +38,8 @@ def run_research(
     budget: Budget | None = None,
     use_cache: bool = True,
     verify_with_llm: bool = True,
+    reference: ReferencePhase | None | bool = True,
+    product_sources: set[str] | None = None,
 ) -> ResearchDossierV2:
     s = get_settings()
     llm = llm or llm_from_settings()
@@ -52,9 +56,14 @@ def run_research(
         state.literature_search = literature
     providers = [p for p in literature_providers_from_settings() if p in state.literature_search] or list(state.literature_search)
 
-    product = ProductPhase(state, ad, verify_with_llm=verify_with_llm).run()
+    if reference is True:
+        reference = ReferencePhase(state)
+    product = ProductPhase(state, ad, verify_with_llm=verify_with_llm, product_sources=product_sources).run()
     phases = EvidencePhases(state, ad, product, max_ingredients=s.research_max_ingredients,
-                            papers_per_query=s.research_papers_per_query, providers=providers)
+                            papers_per_query=s.research_papers_per_query, providers=providers,
+                            study_filter=s.research_pubmed_study_filter, trial_registry=s.research_trial_registry,
+                            trials_per_query=s.research_trials_per_query, adverse_events=s.research_openfda,
+                            reference=reference or None, selector=SentenceSelector.from_settings())
     ingredients, finished, claims = phases.run()
     product = product.model_copy(update={"finished_product": finished})
     safety = SafetySummary(

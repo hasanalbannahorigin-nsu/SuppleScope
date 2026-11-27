@@ -12,7 +12,7 @@ from app.jobs.stages import ALL_STAGES, ANALYZE_STAGES, RESEARCH_STAGES, empty_s
 from app.models.advertisement import Advertisement
 from app.models.extraction import ExtractedClaim, ExtractedProduct, MentionedIngredient
 from app.models.media import ExtractedFrame, OcrResult, SpeechTranscript, UploadedFile
-from app.models.pipeline_v2 import AdExtractionRecord, ResearchDossierRecord
+from app.models.pipeline_v2 import AdExtractionRecord, PatientRiskRecord, ResearchDossierRecord, VerificationRecord
 from app.models.research import (
     DiseaseRiskResearch,
     InteractionResearch,
@@ -505,3 +505,89 @@ def risk_research(
             for d in diseases
         ],
     }
+
+
+# ---- claim verifier and patient risk (completed stack) ------------------------------------------------------
+
+class VerifyIn(BaseModel):
+    mode: str | None = Field(default=None, description="auto, rules, ensemble, ensemble+rules, llm_baseline, llm_baseline+rules")
+
+
+@router.post("/{advertisement_id}/verify")
+def verify_claims(
+    advertisement_id: str,
+    payload: VerifyIn | None = None,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Run the claim verifier on the latest v2 dossier and store one VerifierOutput per claim."""
+    from app.schemas.research.dossier import ResearchDossierV2
+    from app.services.verification.handoff import build_verifier_inputs
+    from app.services.verification.models import verifier_from_settings
+
+    ad = get_owned_advertisement(db, user, advertisement_id)
+    dossier = ResearchDossierV2.model_validate(_latest_dossier_v2(db, ad.id).payload)
+    try:
+        verifier = verifier_from_settings(payload.mode if payload else None)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    outputs = verifier.verify(build_verifier_inputs(dossier))
+    body = {"verifier": verifier.name, "dossier_id": dossier.dossier_id,
+            "outputs": [o.model_dump(mode="json") for o in outputs]}
+    db.add(VerificationRecord(advertisement_id=ad.id, dossier_id=dossier.dossier_id, verifier=verifier.name[:160],
+                              schema_version=dossier.schema_version, payload=body))
+    db.commit()
+    return body
+
+
+@router.get("/{advertisement_id}/verification")
+def get_verification(
+    advertisement_id: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    ad = get_owned_advertisement(db, user, advertisement_id)
+    row = (db.query(VerificationRecord).filter_by(advertisement_id=ad.id)
+           .order_by(VerificationRecord.created_at.desc()).first())
+    if row is None:
+        raise HTTPException(status_code=404, detail="No verification yet; run POST /verify")
+    return row.payload
+
+
+@router.post("/{advertisement_id}/patient-risk")
+def patient_risk(
+    advertisement_id: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Patient-specific risk from the saved patient context and the latest v2 dossier."""
+    from app.schemas.research.dossier import ResearchDossierV2
+    from app.services.patient_risk.engine import assess, profile_from_context
+    from app.services.patient_risk.rxnorm import generic_name
+
+    ad = get_owned_advertisement(db, user, advertisement_id)
+    dossier = ResearchDossierV2.model_validate(_latest_dossier_v2(db, ad.id).payload)
+    ctx = db.query(PatientContext).filter_by(advertisement_id=ad.id).one_or_none()
+    if ctx is None:
+        raise HTTPException(status_code=400, detail="Save the patient context (medicines, diseases) first")
+    profile = profile_from_context(ctx.age, ctx.diseases, ctx.medications, ctx.health_context)
+    report = assess(dossier, profile, rxnorm=generic_name)
+    body = report.model_dump(mode="json")
+    db.add(PatientRiskRecord(advertisement_id=ad.id, dossier_id=dossier.dossier_id,
+                             schema_version=report.schema_version, payload=body))
+    db.commit()
+    return body
+
+
+@router.get("/{advertisement_id}/patient-risk")
+def get_patient_risk(
+    advertisement_id: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    ad = get_owned_advertisement(db, user, advertisement_id)
+    row = (db.query(PatientRiskRecord).filter_by(advertisement_id=ad.id)
+           .order_by(PatientRiskRecord.created_at.desc()).first())
+    if row is None:
+        raise HTTPException(status_code=404, detail="No patient risk report yet; run POST /patient-risk")
+    return row.payload

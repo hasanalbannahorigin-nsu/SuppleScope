@@ -2,6 +2,8 @@
 
     WEB_SEARCH_PROVIDER=duckduckgo   (free, no key; HTML results page)
     WEB_SEARCH_PROVIDER=tavily       (free tier; set TAVILY_API_KEY)
+    WEB_SEARCH_PROVIDER=merged       (DuckDuckGo + Tavily, results interleaved and de-duplicated;
+                                      DuckDuckGo alone when no Tavily key is set)
 
 Add a provider by writing a class with `name` and `search(query, max_results)`
 and registering it in PROVIDERS.
@@ -125,9 +127,51 @@ class TavilySearch:
         ]
 
 
+def _url_key(url: str) -> str:
+    p = urlparse(url)
+    return (p.netloc.lower().removeprefix("www.") + p.path.rstrip("/")).lower() + ("?" + p.query if p.query else "")
+
+
+class MergedSearch:
+    """Several providers for one query: results interleaved by rank, duplicate URLs dropped.
+    A provider that fails is skipped; the search fails only when all of them fail."""
+
+    def __init__(self, providers: list[SearchProvider]) -> None:
+        if not providers:
+            raise ValueError("MergedSearch needs at least one provider")
+        self.providers = providers
+        self.name = "merged(" + "+".join(p.name for p in providers) + ")"
+
+    def search(self, query: str, max_results: int = 8) -> list[SearchHit]:
+        lists, errors = [], []
+        for p in self.providers:
+            try:
+                lists.append(p.search(query, max_results))
+            except Exception as exc:  # one provider down must not stop the other
+                errors.append(exc)
+                logger.warning("search provider %s failed: %s", p.name, exc)
+        if not lists and errors:
+            raise errors[0]
+        out, seen = [], set()
+        for i in range(max(map(len, lists), default=0)):
+            for hits in lists:
+                if i < len(hits) and _url_key(hits[i].url) not in seen:
+                    seen.add(_url_key(hits[i].url))
+                    out.append(SearchHit(title=hits[i].title, url=hits[i].url, snippet=hits[i].snippet,
+                                         provider=hits[i].provider, rank=len(out) + 1))
+        return out[:max_results]
+
+
 def provider_from_settings() -> SearchProvider:
     s = get_settings()
     name = (s.web_search_provider or "duckduckgo").lower()
+    if name == "merged":
+        providers: list[SearchProvider] = [DuckDuckGoSearch()]
+        if s.tavily_api_key:
+            providers.append(TavilySearch(s.tavily_api_key))
+        else:
+            logger.warning("WEB_SEARCH_PROVIDER=merged but TAVILY_API_KEY is empty; using DuckDuckGo only")
+        return providers[0] if len(providers) == 1 else MergedSearch(providers)
     if name == "tavily":
         return TavilySearch(s.tavily_api_key)
     if name == "duckduckgo":

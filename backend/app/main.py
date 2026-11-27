@@ -61,7 +61,10 @@ async def unhandled(_: Request, exc: Exception) -> JSONResponse:
 
 @app.get("/api/health")
 def health() -> dict:
-    return {"status": "ok", "name": "SuppleScope", "future_model": "NOT_INTEGRATED"}
+    from app.config import get_settings
+
+    dirs = (get_settings().verifier_model_dirs or "").strip()
+    return {"status": "ok", "name": "SuppleScope", "verifier": "ENSEMBLE_CONFIGURED" if dirs else "RULES_ONLY"}
 
 
 @app.get("/api/system/media-status")

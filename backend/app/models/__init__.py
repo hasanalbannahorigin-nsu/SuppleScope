@@ -2,7 +2,7 @@ from app.models.advertisement import Advertisement
 from app.models.extraction import ExtractedClaim, ExtractedProduct, MentionedIngredient
 from app.models.future import FutureModelConfiguration
 from app.models.media import ExtractedFrame, OcrResult, SpeechTranscript, UploadedFile
-from app.models.pipeline_v2 import AdExtractionRecord, ResearchDossierRecord
+from app.models.pipeline_v2 import AdExtractionRecord, PatientRiskRecord, ResearchDossierRecord, VerificationRecord
 from app.models.research import (
     DiseaseRiskResearch,
     EvidencePassage,
@@ -43,5 +43,7 @@ __all__ = [
     "ResearchReport",
     "FutureModelConfiguration",
     "AdExtractionRecord",
+    "VerificationRecord",
+    "PatientRiskRecord",
     "ResearchDossierRecord",
 ]

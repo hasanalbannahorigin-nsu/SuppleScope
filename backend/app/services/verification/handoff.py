@@ -61,6 +61,9 @@ def build_verifier_inputs(d: ResearchDossierV2) -> list[VerifierInput]:
                 discrepancies=discrepancies,
                 sources=[sources[s] for s in used_sources if s in sources],
                 claim_research_status=cr.status,
+                claim_kind=cr.kind,
+                claim_notes=cr.notes,
+                evidence_sentences=cr.evidence_sentences,
                 missing_information=d.missing_information,
                 uncertainties=d.uncertainties,
             )

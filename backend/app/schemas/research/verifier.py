@@ -11,7 +11,7 @@ from enum import Enum
 from pydantic import Field
 
 from app.schemas.research.ad_extraction import AdClaim
-from app.schemas.research.claim import ClaimEvidenceLink
+from app.schemas.research.claim import ClaimEvidenceLink, EvidenceSentence
 from app.schemas.research.common import (
     SCHEMA_VERSION,
     EvidenceRecord,
@@ -50,6 +50,9 @@ class VerifierInput(Strict):
     discrepancies: list[Discrepancy] = Field(default_factory=list, description="Ad-vs-official differences touching this claim or its ingredients")
     sources: list[Source] = Field(default_factory=list, description="Only sources referenced above")
     claim_research_status: ResearchStatus
+    claim_kind: str | None = Field(None, description="health_effect, safety, general_wellness, regulatory_or_quality, other")
+    claim_notes: str | None = None
+    evidence_sentences: list[EvidenceSentence] = Field(default_factory=list, description="Top-k premise sentences")
     missing_information: list[MissingItem] = Field(default_factory=list)
     uncertainties: list[str] = Field(default_factory=list)
 

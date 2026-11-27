@@ -45,6 +45,18 @@ class ClaimEvidenceLink(Strict):
     relevant_passage: str = Field(description="The part of the evidence passage that bears on this claim")
 
 
+class EvidenceSentence(Strict):
+    """One of the top-k sentences most related to the claim (premise text for the verifier)."""
+
+    evidence_id: str
+    source_id: str
+    sentence: str = Field(description="Copied verbatim from the retrieved abstract / record")
+    score: float
+    rank: int
+    retriever: str = Field(description="'bm25', 'bm25+embedding' or 'bm25+embedding+cross-encoder'")
+    tag: str | None = Field(None, description="'<scope>|<study type>' of the record, e.g. 'INGREDIENT|RCT'")
+
+
 class ClaimResearch(Strict):
     claim_id: str = Field(description="AdClaim.claim_id")
     claim_text_original: str
@@ -60,4 +72,7 @@ class ClaimResearch(Strict):
     official_material_mentions_claim: bool | None = Field(None, description="Does the official label/site make the same claim?")
     official_material_finding_ids: list[str] = Field(default_factory=list)
     queries_tried: list[str] = Field(default_factory=list)
+    kind: str | None = Field(None, description="Planner's kind: health_effect, safety, general_wellness, regulatory_or_quality, other")
+    evidence_sentences: list[EvidenceSentence] = Field(default_factory=list,
+                                                       description="Top-k sentences for the verifier (EVIDENCE_TOP_K)")
     notes: str | None = None

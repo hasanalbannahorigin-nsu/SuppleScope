@@ -1,4 +1,9 @@
-"""Fetch a web page or PDF and turn it into plain text the agent can quote from."""
+"""Fetch a web page or PDF and turn it into plain text the agent can quote from.
+
+HTML: trafilatura (main-content extraction, tables kept) comes first, then any line of the full page
+text that trafilatura left out (ingredient tables on shop pages often sit outside the "main" block).
+Without trafilatura installed the built-in parser alone is used, as before.
+"""
 from __future__ import annotations
 
 import hashlib
@@ -58,6 +63,32 @@ def html_to_text(html: str) -> tuple[str, str]:
     return parser.title.strip(), text.strip()
 
 
+def main_text(html: str) -> str:
+    """trafilatura main content, or "" when the library is missing or finds nothing."""
+    try:
+        import trafilatura
+    except ImportError:
+        return ""
+    try:
+        return (trafilatura.extract(html, include_tables=True, include_comments=False, favor_recall=True,
+                                    deduplicate=True) or "").strip()
+    except Exception:  # malformed pages
+        logger.debug("trafilatura failed", exc_info=True)
+        return ""
+
+
+def page_text(html: str) -> tuple[str, str]:
+    """(title, text): main content first, then the rest of the page lines not already included."""
+    title, full = html_to_text(html)
+    main = main_text(html)
+    if not main:
+        return title, full
+    have = {" ".join(line.split()).lower() for line in main.splitlines() if line.strip()}
+    rest = [line for line in full.splitlines() if line.strip() and " ".join(line.split()).lower() not in have]
+    text = main if not rest else main + "\n\n[Other text on the page]\n" + "\n".join(rest)
+    return title, text
+
+
 def pdf_to_text(data: bytes) -> str:
     try:
         from pypdf import PdfReader
@@ -86,7 +117,7 @@ def fetch_document(url: str, *, max_chars: int = 60000, timeout: float = 25.0) -
     if ctype == "application/pdf" or url.lower().endswith(".pdf"):
         title, text = "", pdf_to_text(response.content)
     else:
-        title, text = html_to_text(response.text)
+        title, text = page_text(response.text)
     text = text[:max_chars]
     return FetchedDoc(url=url, final_url=str(response.url), title=title, text=text, content_type=ctype,
                       sha256=hashlib.sha256(text.encode("utf-8")).hexdigest(), status=response.status_code)

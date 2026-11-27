@@ -10,3 +10,10 @@ service-account.json
 backend/eval/out/
 backend/data/cache/
 data/cache/
+
+# completed stack: local data and models (never commit)
+backend/data/knowledge/
+backend/data/verifier/
+backend/models/
+backend/eval/verifier_gold.jsonl
+backend/eval/label_studio_tasks.json

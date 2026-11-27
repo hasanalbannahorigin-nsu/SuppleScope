@@ -1,0 +1,33 @@
+<!-- SuppleScope claim-verification labelling interface for Label Studio (labelstud.io).
+     Create a project, Settings > Labeling Interface > Code, paste this, then import tasks.json
+     made by:  python -m labelling.export_tasks verifier_input.jsonl tasks.json -->
+<View>
+  <Header value="Advertisement claim"/>
+  <Text name="claim" value="$claim" />
+  <Text name="claim_en" value="$claim_en" />
+  <Header value="Product and evidence (from the research dossier)"/>
+  <Text name="product" value="$product" />
+  <Text name="evidence" value="$evidence" />
+  <Header value="1. Verdict for this claim"/>
+  <Choices name="verdict" toName="claim" choice="single" required="true" showInline="false">
+    <Choice value="SUPPORTED" hint="Human studies of this product measured the effect and support it as stated"/>
+    <Choice value="PARTIALLY_SUPPORTED" hint="Only part of the claim, only an ingredient, or weaker than stated"/>
+    <Choice value="CONTRADICTED" hint="Studies that measured the effect found no benefit or harm"/>
+    <Choice value="INSUFFICIENT_EVIDENCE" hint="No relevant human evidence (or only animal / cell / background)"/>
+    <Choice value="NOT_ASSESSABLE" hint="No measurable health outcome in the claim"/>
+  </Choices>
+  <Header value="2. Is the evidence about the finished product or only an ingredient?"/>
+  <Choices name="directness" toName="evidence" choice="single">
+    <Choice value="PRODUCT"/>
+    <Choice value="INGREDIENT_ONLY"/>
+    <Choice value="NONE"/>
+  </Choices>
+  <Header value="3. Safety concern for a typical buyer (optional)"/>
+  <Choices name="risk" toName="claim" choice="single">
+    <Choice value="LOW"/>
+    <Choice value="MEDIUM"/>
+    <Choice value="HIGH"/>
+    <Choice value="UNKNOWN"/>
+  </Choices>
+  <TextArea name="note" toName="claim" placeholder="Why? (one line)" maxSubmissions="1"/>
+</View>

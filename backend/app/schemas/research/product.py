@@ -106,12 +106,31 @@ class Discrepancy(Strict):
     description: str
 
 
+class CountItem(Strict):
+    name: str
+    count: int
+
+
+class AdverseEventSummary(Strict):
+    """Counts from FDA CAERS (openFDA food/event) for the product name. Not evidence of cause."""
+
+    source_id: str
+    query: str
+    total_reports: int
+    reports_read: int
+    top_reactions: list[CountItem] = Field(default_factory=list)
+    outcomes: list[CountItem] = Field(default_factory=list)
+    product_names_seen: list[str] = Field(default_factory=list)
+    caveat: str
+
+
 class FinishedProductResearch(Strict):
     """Studies on the exact finished product. Never filled from ingredient studies."""
 
     status: ResearchStatus
     evidence_ids: list[str] = Field(default_factory=list, description="EvidenceRecords with scope FINISHED_PRODUCT")
     manufacturer_claimed_studies: list[str] = Field(default_factory=list, description="finding_ids where the manufacturer cites a study that was not independently found")
+    adverse_event_reports: AdverseEventSummary | None = Field(None, description="FDA CAERS reports naming the product, if searched")
     queries_tried: list[str] = Field(default_factory=list)
     notes: str | None = None
 

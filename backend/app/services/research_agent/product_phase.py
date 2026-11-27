@@ -41,6 +41,7 @@ from app.schemas.research.product import (
 from app.services.research_agent import prompts as P
 from app.services.research_agent.budget import BudgetExhausted
 from app.services.research_agent.state import NEVER_OFFICIAL, SOURCE_RANK, ReadPage, ResearchState, domain
+from app.services.research_agent.tools.product_sources import DsldSearch, enabled_sources, extra_queries
 from app.services.research_agent.validate import quote_in_source, value_in_passage
 from app.services.text.bangla import similarity, to_ascii_digits
 
@@ -201,8 +202,11 @@ class _Cand:
 
 
 class ProductPhase:
-    def __init__(self, state: ResearchState, ad: AdExtraction, *, verify_with_llm: bool = True) -> None:
+    def __init__(self, state: ResearchState, ad: AdExtraction, *, verify_with_llm: bool = True,
+                 product_sources: set[str] | None = None, dsld=None) -> None:
         self.s, self.ad, self.verify_with_llm = state, ad, verify_with_llm
+        self.product_sources = enabled_sources() if product_sources is None else product_sources
+        self.dsld = dsld or DsldSearch()
         self.name_variants: list[str] = [ad.product_name.value] if ad.product_name else []
         self.candidates: list[_Cand] = []
         self.identity: ProductIdentity | None = None
@@ -220,6 +224,8 @@ class ProductPhase:
                 hits = []
                 for q in queries:
                     hits += self.s.search(q, "identity")
+                if round_no == 0:
+                    hits += self._product_source_hits()
                 self._open_and_read(hits, round_no)
                 self._decide_identity()
                 gaps = self._gaps()
@@ -242,6 +248,19 @@ class ProductPhase:
             self.name_variants = list(dict.fromkeys(self.name_variants + plan.name_variants))
             return list(dict.fromkeys(plan.queries[:6] + base))
         return base + [f"{base[0]} ingredients"] if base else []
+
+    def _product_source_hits(self) -> list:
+        """DSLD label records and Bangladesh-specific pages (DGDA, online pharmacies), see tools/product_sources."""
+        product = self.ad.product_name.value if self.ad.product_name else None
+        brand = self.ad.brand.value if self.ad.brand else None
+        sources = self.product_sources
+        hits = []
+        for q in extra_queries(product, brand, sources):
+            hits += self.s.search(q, "identity")
+        latin = next((v for v in [product, *self.name_variants, brand] if v and script_of(v) == "latin"), None)
+        if "dsld" in sources and latin:
+            hits += self.s.search(latin, "identity", max_results=5, provider=self.dsld)
+        return hits
 
     def _follow_up(self, gaps: list[str]) -> list[str]:
         known = {

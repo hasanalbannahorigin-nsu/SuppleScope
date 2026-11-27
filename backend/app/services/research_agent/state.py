@@ -12,8 +12,15 @@ from app.schemas.research.dossier import LogEntry
 from app.services.llm.client import JsonLlm
 from app.services.research_agent.budget import Budget, BudgetExhausted
 from app.services.research_agent.tools.cache import NullCache
-from app.services.research_agent.tools.fetch import FetchedDoc, doc_from_json, doc_to_json, fetch_document
-from app.services.research_agent.tools.literature import LITERATURE_SEARCH, Paper, paper_from_json, paper_to_json
+from app.services.research_agent.tools.fetch import FetchedDoc, doc_from_json, doc_to_json
+from app.services.research_agent.tools.literature import (
+    LITERATURE_SEARCH,
+    REGISTRY_PROVIDER,
+    Paper,
+    paper_from_json,
+    paper_to_json,
+)
+from app.services.research_agent.tools.product_sources import fetch_any
 from app.services.research_agent.tools.search import SearchHit, SearchProvider, hits_from_json, hits_to_json
 
 logger = logging.getLogger(__name__)
@@ -26,6 +33,7 @@ SOURCE_RANK = {
     SourceType.CLINICAL_TRIAL_REGISTRY: 3,
     SourceType.DRUG_LABEL_DATABASE: 3,
     SourceType.REFERENCE_DATABASE: 4,
+    SourceType.ADVERSE_EVENT_DATABASE: 5,
     SourceType.THIRD_PARTY_RETAIL: 6,
     SourceType.THIRD_PARTY_OTHER: 7,
     SourceType.ADVERTISEMENT: 9,
@@ -65,7 +73,7 @@ class ResearchState:
     budget: Budget
     llm: JsonLlm
     search_provider: SearchProvider
-    fetcher: callable = fetch_document
+    fetcher: callable = fetch_any
     cache: object = field(default_factory=NullCache)
     fetch_max_chars: int = 60000
     sources: dict[str, Source] = field(default_factory=dict)
@@ -81,6 +89,7 @@ class ResearchState:
     literature_queries: list[str] = field(default_factory=list)
     paper_sources: dict[str, str] = field(default_factory=dict)  # pmid/doi/title key -> source_id
     paper_texts: dict[str, str] = field(default_factory=dict)  # source_id -> title + abstract (for quote checks)
+    reference_texts: dict[str, str] = field(default_factory=dict)  # source_id -> text of a database record
     _ids: dict[str, int] = field(default_factory=dict)
 
     def new_id(self, prefix: str) -> str:
@@ -103,28 +112,70 @@ class ResearchState:
 
     # ---- tools -------------------------------------------------------------------------
 
-    def search(self, query: str, phase: str, max_results: int = 8) -> list[SearchHit]:
+    def search(self, query: str, phase: str, max_results: int = 8, provider: SearchProvider | None = None) -> list[SearchHit]:
+        """Web search (or another SearchProvider such as DSLD), cached, budgeted and logged."""
+        provider = provider or self.search_provider
         query = " ".join(query.split())
-        if not query or query.lower() in (q.lower() for q in self.queries_tried):
+        tried_key = query if provider is self.search_provider else f"{provider.name}: {query}"
+        if not query or tried_key.lower() in (q.lower() for q in self.queries_tried):
             return []
-        self.queries_tried.append(query)
-        key = f"{self.search_provider.name}|{max_results}|{query}"
+        self.queries_tried.append(tried_key)
+        key = f"{provider.name}|{max_results}|{query}"
+        tool = f"web_search:{provider.name}" if provider is self.search_provider else f"database:{provider.name}"
         cached = self.cache.get("search", key)
         if cached is not None:
             hits = hits_from_json(cached)
-            self.add_log(phase, "search", tool=f"web_search:{self.search_provider.name}(cache)", query=query, result_count=len(hits))
+            self.add_log(phase, "search", tool=f"{tool}(cache)", query=query, result_count=len(hits))
             return hits
         self.budget.charge_search()
         try:
-            hits = self._retry(self.search_provider.search, query, max_results)
+            hits = self._retry(provider.search, query, max_results)
         except BudgetExhausted:
             raise
         except Exception as exc:
-            self.add_log(phase, "search", tool=f"web_search:{self.search_provider.name}", query=query, error=str(exc)[:300])
+            self.add_log(phase, "search", tool=tool, query=query, error=str(exc)[:300])
             return []
         self.cache.set("search", key, hits_to_json(hits))
-        self.add_log(phase, "search", tool=f"web_search:{self.search_provider.name}", query=query, result_count=len(hits))
+        self.add_log(phase, "search", tool=tool, query=query, result_count=len(hits))
         return hits
+
+    def lookup(self, tool: str, key: str, fn, phase: str, *, encode=lambda x: x, decode=lambda x: x,
+               charge: bool = True, query: str | None = None):
+        """A database call (openFDA, NIH ODS, NCCIH, ...): cached, charged to the lookup budget, logged.
+        Returns None when the call fails, so a database being down never stops the research."""
+        cached = self.cache.get("lookup", f"{tool}|{key}")
+        if cached is not None:
+            self.add_log(phase, "search", tool=f"{tool}(cache)", query=query or key)
+            return decode(cached)
+        if charge:
+            self.budget.charge_lookup()
+        try:
+            out = self._retry(fn)
+        except BudgetExhausted:
+            raise
+        except Exception as exc:
+            self.add_log(phase, "search", tool=tool, query=query or key, error=str(exc)[:300])
+            return None
+        self.cache.set("lookup", f"{tool}|{key}", encode(out))
+        self.add_log(phase, "search", tool=tool, query=query or key)
+        return out
+
+    def add_reference_source(self, *, source_type: SourceType, url: str | None, title: str, publisher: str, text: str,
+                             tool: str, notes: str | None = None) -> Source:
+        """Source for a database record whose text is kept for quote checks (one per url+title)."""
+        key = f"ref:{url}|{title}"
+        if key in self.paper_sources:
+            return self.sources[self.paper_sources[key]]
+        src = Source(
+            source_id=self.new_id("src"), source_type=source_type, url=url, title=title, site_or_publisher=publisher,
+            language="en", retrieved_at=now(), retrieved_by_tool=tool,
+            content_hash=hashlib.sha256(text.encode("utf-8")).hexdigest(), reliability_rank=SOURCE_RANK[source_type],
+            notes=notes,
+        )
+        self.sources[src.source_id] = src
+        self.paper_sources[key] = src.source_id
+        self.reference_texts[src.source_id] = text
+        return src
 
     def fetch(self, url: str, phase: str) -> FetchedDoc | None:
         if url in self.urls_seen:
@@ -176,17 +227,19 @@ class ResearchState:
         return papers
 
     def add_paper_source(self, paper: Paper) -> Source:
-        key = (paper.pmid and f"pmid:{paper.pmid}") or (paper.doi and f"doi:{paper.doi.lower()}") or f"title:{paper.title.lower()}"
+        key = ((paper.pmid and f"pmid:{paper.pmid}") or (paper.doi and f"doi:{paper.doi.lower()}")
+               or (paper.nct_id and f"nct:{paper.nct_id}") or f"title:{paper.title.lower()}")
         if key in self.paper_sources:
             return self.sources[self.paper_sources[key]]
         text = f"{paper.title}\n{paper.abstract}"
+        stype = SourceType.CLINICAL_TRIAL_REGISTRY if paper.provider == REGISTRY_PROVIDER else SourceType.SCIENTIFIC_LITERATURE
         src = Source(
-            source_id=self.new_id("src"), source_type=SourceType.SCIENTIFIC_LITERATURE, url=paper.url, doi=paper.doi,
+            source_id=self.new_id("src"), source_type=stype, url=paper.url, doi=paper.doi, nct_id=paper.nct_id,
             pmid=paper.pmid, pmcid=paper.pmcid, title=paper.title or None, site_or_publisher=paper.provider or None,
             authors=paper.authors, journal=paper.journal, publication_year=paper.year, language="en",
             retrieved_at=now(), retrieved_by_tool=f"{paper.provider or 'literature'}_search",
             content_hash=hashlib.sha256(text.encode("utf-8")).hexdigest(),
-            reliability_rank=SOURCE_RANK[SourceType.SCIENTIFIC_LITERATURE],
+            reliability_rank=SOURCE_RANK[stype],
         )
         self.sources[src.source_id] = src
         self.paper_sources[key] = src.source_id

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 
 from app.config import get_settings
@@ -78,6 +79,13 @@ class OpenAIWhisperProvider(SpeechToTextProvider):
         )
 
 
+@lru_cache(maxsize=1)
+def _whisper_model(size: str, device: str, compute_type: str):
+    from faster_whisper import WhisperModel
+
+    return WhisperModel(size, device=device, compute_type=compute_type)
+
+
 class FasterWhisperProvider(SpeechToTextProvider):
     name = "faster_whisper"
 
@@ -92,11 +100,13 @@ class FasterWhisperProvider(SpeechToTextProvider):
         return None
 
     def transcribe(self, audio_path: Path) -> TranscriptResult:
-        from faster_whisper import WhisperModel
-
         settings = get_settings()
-        model = WhisperModel(settings.faster_whisper_model, device="cpu", compute_type="int8")
-        segments_iter, info = model.transcribe(str(audio_path), vad_filter=True)
+        # medium is the recommended size for Bangla (small mis-hears many words); the model is loaded once per
+        # process and reused. STT_LANGUAGE=bn skips language detection, which often picks Hindi for Bangla ads.
+        model = _whisper_model(settings.faster_whisper_model, settings.faster_whisper_device,
+                               settings.faster_whisper_compute_type)
+        segments_iter, info = model.transcribe(str(audio_path), vad_filter=True, language=settings.stt_language or None,
+                                               beam_size=5)
         segments = []
         texts = []
         for segment in segments_iter:

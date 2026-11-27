@@ -1,0 +1,16 @@
+# Optional heavy extras for the completed stack (CPU works; a GPU is faster). Install with:
+#   pip install -r requirements-ml.txt
+# Evidence selection: biomedical sentence embeddings + cross-encoder re-ranker
+sentence-transformers==3.3.1
+# Claim verifier inference (fine-tuned RoBERTa / PubMedBERT checkpoints) and training
+transformers==4.46.3
+datasets==3.1.0
+accelerate==1.1.1
+# Second OCR engine (Bengali + English)
+easyocr==1.7.2
+# Local speech-to-text for video ads (STT_PROVIDER=faster_whisper)
+faster-whisper==1.1.0
+# Cross-check of the built-in metrics
+scikit-learn==1.5.2
+# PyTorch: install the build for your machine first, e.g. CPU only on Windows:
+#   pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu

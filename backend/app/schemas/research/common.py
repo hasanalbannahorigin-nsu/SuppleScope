@@ -6,7 +6,7 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field
 
-SCHEMA_VERSION = "2.1.0"
+SCHEMA_VERSION = "2.2.0"
 
 
 class Strict(BaseModel):
@@ -36,7 +36,8 @@ class SourceType(str, Enum):
     SCIENTIFIC_LITERATURE = "SCIENTIFIC_LITERATURE"  # PubMed / Europe PMC / journal pages
     CLINICAL_TRIAL_REGISTRY = "CLINICAL_TRIAL_REGISTRY"  # ClinicalTrials.gov etc.
     DRUG_LABEL_DATABASE = "DRUG_LABEL_DATABASE"  # OpenFDA drug labels etc.
-    REFERENCE_DATABASE = "REFERENCE_DATABASE"  # NIH ODS fact sheets, LiverTox, etc.
+    REFERENCE_DATABASE = "REFERENCE_DATABASE"  # NIH ODS fact sheets, NCCIH, iDISK2.0, LiverTox, etc.
+    ADVERSE_EVENT_DATABASE = "ADVERSE_EVENT_DATABASE"  # FDA CAERS (openFDA food/event) reports
     ADVERTISEMENT = "ADVERTISEMENT"  # the uploaded ad itself
 
 
@@ -49,6 +50,7 @@ class InformationClass(str, Enum):
     REGULATORY = "REGULATORY"
     THIRD_PARTY = "THIRD_PARTY"
     SCIENTIFIC_EVIDENCE = "SCIENTIFIC_EVIDENCE"
+    REFERENCE = "REFERENCE"  # reference databases about an ingredient (fact sheets, knowledge graph, drug labels)
     UNVERIFIED = "UNVERIFIED"  # failed or skipped validation
     CONFLICTING = "CONFLICTING"  # contradicted by another source of similar or higher rank
 

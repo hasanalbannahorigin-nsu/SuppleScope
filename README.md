@@ -376,3 +376,11 @@ With the defaults (`EXTRACTION_BACKEND=baseline`, `RESEARCH_AGENT=legacy`) the a
 
 New endpoints: `GET /api/advertisements/{id}/ad-extraction`, `/dossier-v2`, `/verifier-input.jsonl`.
 Evaluation on the real ads: see `backend/eval/README.md` and `backend/scripts/eval_real_ads.py`.
+
+## 11. Completed technology stack
+
+Every layer of the recommended stack (OCR, speech, name normalisation, search and retrieval, product sources,
+supplement knowledge, literature and safety, evidence selection, claim verifier, model training, patient risk,
+evaluation and labelling, deployment) is now implemented. See [docs/STACK_COMPLETION.md](docs/STACK_COMPLETION.md)
+for what each layer does, the study it comes from, the setting that switches it, and the steps that still need
+your own machine (live API check, iDISK2.0 data, verifier training on Colab, Label Studio labelling, pharmacist review).

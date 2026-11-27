@@ -8,6 +8,12 @@ Rules from the approved plan, enforced here:
 - The agent describes how each study relates to each claim (SUPPORTS / CONTRADICTS / CONTEXT plus match
   levels). It never decides whether a claim is true; that is the separate verification model's job.
 - Search, LLM and time limits come from the shared Budget. Anything not reached is NOT_SEARCHED.
+- Effect searches on PubMed try reviews / RCTs / meta-analyses / clinical trials first (publication-type
+  filter), then an unfiltered search. Safety searches stay unfiltered, because case reports matter there.
+- ClinicalTrials.gov records describe registered trials, not their findings: they are kept as
+  REGISTERED_TRIAL_NO_RESULTS evidence and can only ever be CONTEXT for a claim.
+- Reference knowledge (dictionary, iDISK2.0, NIH ODS, NCCIH, openFDA drug labels) is added per ingredient by
+  ReferencePhase; FDA CAERS adverse-event counts are added for the finished product.
 """
 from __future__ import annotations
 
@@ -19,6 +25,7 @@ from dataclasses import dataclass, field
 from app.schemas.research.ad_extraction import AdClaim, AdExtraction
 from app.schemas.research.claim import (
     ClaimEvidenceLink,
+    EvidenceSentence,
     ClaimEvidenceMatch,
     ClaimResearch,
     EvidenceRelation,
@@ -26,6 +33,7 @@ from app.schemas.research.claim import (
 )
 from app.schemas.research.common import (
     EvidenceRecord,
+    SourceType,
     EvidenceScope,
     InformationClass,
     MissingItem,
@@ -41,12 +49,20 @@ from app.schemas.research.ingredient import (
     IngredientSafety,
     SafetyItem,
 )
-from app.schemas.research.product import FinishedProductResearch, IdentityStatus, ProductResearch
+from app.schemas.research.product import (
+    AdverseEventSummary,
+    CountItem,
+    FinishedProductResearch,
+    IdentityStatus,
+    ProductResearch,
+)
 from app.services.research_agent import prompts as P
 from app.services.research_agent.budget import BudgetExhausted
 from app.services.research_agent.product_phase import core_product_name, script_of
 from app.services.research_agent.state import ResearchState
-from app.services.research_agent.tools.literature import Paper
+from app.services.research_agent.tools import openfda
+from app.services.research_agent.tools.literature import REGISTRY_PROVIDER, Paper, with_study_filter
+from app.services.evidence.selector import Doc, SentenceSelector
 from app.services.research_agent.validate import quote_in_source
 from app.services.text.bangla import match_key, similarity
 
@@ -130,10 +146,27 @@ def build_query(provider: str, names: list[str], terms: list[str] | str | None) 
     return f"({left}) AND ({right})"
 
 
+def _with_safety_status(r: IngredientResearch) -> IngredientResearch:
+    sf = r.safety
+    has = any((sf.side_effects, sf.contraindications, sf.drug_interactions, sf.disease_cautions))
+    if has and sf.status in (ResearchStatus.NO_RELEVANT_STUDY_FOUND, ResearchStatus.NOT_FOUND, ResearchStatus.NOT_SEARCHED):
+        return r.model_copy(update={"safety": sf.model_copy(update={"status": ResearchStatus.PARTIAL})})
+    return r
+
+
 class EvidencePhases:
     def __init__(self, state: ResearchState, ad: AdExtraction, product: ProductResearch, *, max_ingredients: int = 6,
-                 papers_per_query: int = 5, providers: list[str] | None = None) -> None:
+                 papers_per_query: int = 5, providers: list[str] | None = None, study_filter: bool = False,
+                 trial_registry: bool = False, trials_per_query: int = 3, adverse_events: bool = False,
+                 reference=None, normaliser=None, selector: SentenceSelector | None = None) -> None:
         self.s = state
+        self.selector = selector
+        self.study_filter = study_filter
+        self.trial_registry = trial_registry and REGISTRY_PROVIDER in state.literature_search
+        self.trials_per_query = trials_per_query
+        self.adverse_events = adverse_events
+        self.reference = reference  # ReferencePhase or None
+        self.norm = normaliser or (reference.norm if reference is not None else None)
         self.ad = ad
         self.product = product
         self.max_ingredients = max_ingredients
@@ -180,6 +213,12 @@ class EvidencePhases:
             except BudgetExhausted as exc:
                 self.exhausted = exc.kind
                 ingredient_results[ing.ingredient_id] = self._not_searched(ing, f"research budget exhausted ({exc.kind})")
+        if self.reference is not None:
+            for ing in order:
+                r = ingredient_results[ing.ingredient_id]
+                names = (ing.names.search_names if ing.names else []) + ([ing.names.scientific_name] if ing.names and
+                                                                          ing.names.scientific_name else [])
+                ingredient_results[ing.ingredient_id] = _with_safety_status(self.reference.enrich(r, _latin(names)))
 
         finished = self._finished_product()
         claims = [self._research_claim(c, claim_plans.get(c.claim_id), by_id, ingredient_results, finished)
@@ -213,6 +252,9 @@ class EvidencePhases:
         for m in self.ad.ingredients:
             if m.mention_id in used_mentions:
                 continue
+            if self.norm is not None and any(self.norm.same_ingredient(m.name_en or m.name_original, i.standardized_name or i.name)
+                                             or self.norm.same_ingredient(m.name_original, i.name) for i in out):
+                continue  # the ad's Bangla name of an ingredient already on the label (e.g. জাম = jamun)
             n += 1
             while f"ing_ad_{n:02d}" in taken:
                 n += 1
@@ -241,24 +283,57 @@ class EvidencePhases:
         # Fallback without the planner: search by the given names, every claim against every ingredient.
         return P.EvidencePlan(
             ingredients=[P.IngredientNames(ingredient_id=i.ingredient_id,
-                                           search_names=_latin([i.standardized_name or "", i.name])) for i in ings],
+                                           search_names=_latin([i.standardized_name or "", i.name] + self._dict_names(i)),
+                                           scientific_name=self._dict_scientific(i)) for i in ings],
             claims=[P.ClaimPlan(claim_id=c.claim_id, kind=_fallback_kind(c),
                                 outcome_terms=[c.target_en] if c.target_en else [],
                                 ingredient_ids=[i.ingredient_id for i in ings]) for c in self.ad.claims],
         )
 
+    def _dict_names(self, ing: _Ing) -> list[str]:
+        if self.norm is None:
+            return []
+        for n in (ing.standardized_name, ing.name):
+            r = self.norm.normalise(n)
+            if r.entry_id:
+                return r.search_names
+        return []
+
+    def _dict_scientific(self, ing: _Ing) -> str | None:
+        if self.norm is None:
+            return None
+        for n in (ing.standardized_name, ing.name):
+            r = self.norm.normalise(n)
+            if r.entry_id:
+                return r.scientific
+        return None
+
     # ---- phase 3: one ingredient -----------------------------------------------------------------
 
-    def _search(self, names: list[str], terms, phase: str) -> tuple[list[Paper], list[str]]:
+    def _search(self, names: list[str], terms, phase: str, *, filtered: bool = False) -> tuple[list[Paper], list[str]]:
+        """First provider with results wins. With `filtered`, each provider is tried with its study-design
+        filter first (PubMed: reviews, RCTs, meta-analyses, clinical trials) and then without it."""
         tried = []
         for provider in self.providers:
             q = build_query(provider, names, terms)
-            tried.append(f"{provider}: {q}")
-            papers = self.s.literature(provider, q, phase, retmax=self.papers_per_query)
-            papers = [p for p in papers if p.abstract.strip()]
-            if papers:
-                return papers, tried
+            queries = [x for x in ((with_study_filter(provider, q) if filtered and self.study_filter else None), q) if x]
+            for query in queries:
+                tried.append(f"{provider}: {query}")
+                papers = self.s.literature(provider, query, phase, retmax=self.papers_per_query)
+                papers = [p for p in papers if p.abstract.strip()]
+                if papers:
+                    return papers, tried
         return [], tried
+
+    def _registry(self, names: list[str], terms: list[str] | None, phase: str) -> tuple[list[Paper], list[str]]:
+        """Registered trials on ClinicalTrials.gov for these names (and outcome terms, if any)."""
+        if not self.trial_registry or not names:
+            return [], []
+        q = " OR ".join(f'"{n}"' for n in names[:3])
+        if terms:
+            q = f"({q}) AND ({' OR '.join(chr(34) + t + chr(34) for t in terms[:3])})"
+        papers = self.s.literature(REGISTRY_PROVIDER, q, phase, retmax=self.trials_per_query)
+        return [p for p in papers if p.abstract.strip()], [f"{REGISTRY_PROVIDER}: {q}"]
 
     def _research_ingredient(self, ing: _Ing) -> IngredientResearch:
         nm = ing.names or P.IngredientNames(ingredient_id=ing.ingredient_id)
@@ -271,17 +346,19 @@ class EvidencePhases:
                                       safety=IngredientSafety(status=ResearchStatus.NOT_SEARCHED),
                                       notes="No English or Latin name to search the literature with.")
         tried: list[str] = []
-        eff_papers, t1 = self._search(names, ing.outcome_terms[:5] or TRIAL_TERMS, "ingredient")
+        eff_papers, t1 = self._search(names, ing.outcome_terms[:5] or TRIAL_TERMS, "ingredient", filtered=True)
         tried += t1
         if not eff_papers and ing.outcome_terms:
             eff_papers, t2 = self._search(names, TRIAL_TERMS, "ingredient")  # broaden: any trial or review
             tried += t2
         safe_papers, t3 = self._search(names, SAFETY_TERMS, "safety")
         tried += t3
+        trials, t4 = self._registry(names, ing.outcome_terms[:3] or None, "ingredient")
+        tried += t4
         self.ing_queries[ing.ingredient_id] = tried
 
         papers, seen = [], set()
-        for p in eff_papers + safe_papers:
+        for p in eff_papers + safe_papers + trials:
             key = p.pmid or p.doi or p.title.lower()
             if key not in seen:
                 seen.add(key)
@@ -294,7 +371,7 @@ class EvidencePhases:
         for r in passed:
             for e in r.outcomes:
                 effects.setdefault(e.strip().lower(), []).append(r.evidence_id)
-        human = [r for r in passed if r.human_study]
+        human = [r for r in passed if r.human_study and r.study_type != StudyType.REGISTERED_TRIAL_NO_RESULTS]
         doses = list(dict.fromkeys(r.dose for r in human if r.dose))
         if human:
             status = ResearchStatus.FOUND
@@ -336,6 +413,8 @@ class EvidencePhases:
                 passage = (pr.passage or "").strip()
                 q_ok = bool(passage) and quote_in_source(passage, text)
                 st = _study_type(pr.study_type, paper.publication_types)
+                if paper.provider == REGISTRY_PROVIDER:
+                    st = StudyType.REGISTERED_TRIAL_NO_RESULTS  # a registry entry states the plan, not the findings
                 human = pr.human_study if pr.human_study is not None else (True if st in HUMAN_TYPES else None)
                 if st in (StudyType.ANIMAL, StudyType.IN_VITRO):
                     human = False
@@ -389,21 +468,51 @@ class EvidencePhases:
         core = core_product_name(self.chosen.name)
         words = [w for w in core.split() if not re.fullmatch(r"[\d.]+", w)]
         name = " ".join(words) or self.chosen.name
+        reports = None
         try:
             papers, tried = self._search([name], None, "finished_product")
+            trials, t2 = self._registry([name], None, "finished_product")
+            tried += t2
             # Keep only papers that really name the product; a common word must not pull in unrelated studies.
             key = match_key(name)
-            papers = [p for p in papers if key and key in match_key(f"{p.title} {p.abstract}")]
+            papers = [p for p in papers + trials if key and key in match_key(f"{p.title} {p.abstract}")]
             records, _ = self._read_papers(papers, EvidenceScope.FINISHED_PRODUCT, self.chosen.candidate_id,
                                            self.chosen.name, "finished_product")
+            if self.adverse_events:
+                reports = self._adverse_events(name)
+                if reports is not None:
+                    tried.append(f"openfda food/event: {reports.query}")
         except BudgetExhausted as exc:
             self.exhausted = exc.kind
             return FinishedProductResearch(status=ResearchStatus.NOT_SEARCHED, notes=f"research budget exhausted ({exc.kind})")
         passed = [r for r in records if r.validation.passed]
+        studies = [r for r in passed if r.study_type != StudyType.REGISTERED_TRIAL_NO_RESULTS]
+        notes = None if studies else ("Only registered trials (no results read) were found for this exact product."
+                                      if passed else "No study of this exact product was found in the literature searched.")
         return FinishedProductResearch(
-            status=ResearchStatus.FOUND if passed else ResearchStatus.NO_RELEVANT_STUDY_FOUND,
-            evidence_ids=[r.evidence_id for r in records], queries_tried=tried,
-            notes=None if passed else "No study of this exact product was found in the literature searched.")
+            status=ResearchStatus.FOUND if studies else ResearchStatus.PARTIAL if passed else ResearchStatus.NO_RELEVANT_STUDY_FOUND,
+            evidence_ids=[r.evidence_id for r in records], queries_tried=tried, adverse_event_reports=reports, notes=notes)
+
+    def _adverse_events(self, name: str) -> AdverseEventSummary | None:
+        """FDA CAERS counts for reports that name the product (US reports only; never evidence of cause)."""
+        try:
+            rep = self.s.lookup("openfda:food_event", name.lower(), lambda: openfda.food_event_reports(name),
+                                "finished_product", encode=openfda.reports_to_json, decode=openfda.reports_from_json,
+                                query=name)
+        except BudgetExhausted as exc:
+            if exc.kind != "lookup":
+                raise
+            return None
+        if rep is None:
+            return None
+        src = self.s.add_reference_source(source_type=SourceType.ADVERSE_EVENT_DATABASE, url=rep.url,
+                                          title=f"FDA CAERS reports naming '{name}'", publisher="openFDA food/event",
+                                          text=openfda.caers_text(rep), tool="openfda_food_event", notes=openfda.CAERS_CAVEAT)
+        return AdverseEventSummary(
+            source_id=src.source_id, query=rep.query, total_reports=rep.total_reports, reports_read=rep.reports_read,
+            top_reactions=[CountItem(name=n, count=c) for n, c in rep.top_reactions],
+            outcomes=[CountItem(name=n, count=c) for n, c in rep.outcomes],
+            product_names_seen=rep.product_names_seen, caveat=openfda.CAERS_CAVEAT)
 
     # ---- phase 5: one claim ---------------------------------------------------------------------------
 
@@ -413,6 +522,7 @@ class EvidencePhases:
         official = self._official_mentions(claim)
         base = dict(claim_id=claim.claim_id, claim_text_original=claim.text_original, claim_text_en=claim.text_en,
                     claim_type=claim.claim_type.value, target=claim.target_en or claim.target, qualifiers=claim.qualifiers,
+                    kind=kind,
                     research_questions=[plan.question] if plan and plan.question else [],
                     official_material_mentions_claim=official[0], official_material_finding_ids=official[1])
         fp_status = finished.status
@@ -472,6 +582,8 @@ class EvidencePhases:
                 dropped += 1
                 continue
             relation, outcome = link_relation(li.relation, li.outcome)
+            if rec.study_type == StudyType.REGISTERED_TRIAL_NO_RESULTS:
+                relation = EvidenceRelation.CONTEXT  # a registered trial without read results shows nothing either way
             downgraded += relation.value != li.relation
             population = MatchLevel(li.population)
             if rec.human_study is False and population == MatchLevel.SAME:
@@ -503,7 +615,26 @@ class EvidencePhases:
             f"{len(trimmed)} more background link(s) left out." if trimmed else "",
         ) if x) or None
         return ClaimResearch(**base, linked_ingredient_ids=linked, status=status, finished_product_status=fp_status,
-                             evidence_links=links, queries_tried=queries, notes=notes)
+                             evidence_links=links, queries_tried=queries, notes=notes,
+                             evidence_sentences=self._sentences(claim, candidates, plan))
+
+    def _sentences(self, claim: AdClaim, records: list[EvidenceRecord], plan: P.ClaimPlan | None = None) -> list[EvidenceSentence]:
+        """Top-k sentences of the retrieved abstracts for the claim (MelAnalyze top-5, CliVER re-ranking).
+        The query adds the planner's outcome terms ("blood glucose" for an ad's "sugar level")."""
+        if self.selector is None or not records:
+            return []
+        query = " ".join(x for x in (claim.text_en or claim.text_original, claim.target_en or "",
+                                     *((plan.outcome_terms if plan else []) or []), (plan.question if plan else "") or "") if x)
+        docs = [Doc(doc_id=r.evidence_id, source_id=r.source_id,
+                    text=self.s.paper_texts.get(r.source_id) or r.passage, tag=f"{r.scope.value}|{r.study_type.value}")
+                for r in records]
+        try:
+            picked = self.selector.select(query, docs)
+        except Exception as exc:  # a model failing must not lose the research
+            logger.warning("evidence selection failed: %s", exc)
+            return []
+        return [EvidenceSentence(evidence_id=x.doc_id, source_id=x.source_id, sentence=x.sentence, score=x.score,
+                                 rank=x.rank, retriever=x.retriever, tag=x.tag or None) for x in picked]
 
     def _link(self, claim: AdClaim, kind: str, records: list[EvidenceRecord]) -> P.ClaimLinks | None:
         usage = [u.text for u in self.ad.usage][:3]

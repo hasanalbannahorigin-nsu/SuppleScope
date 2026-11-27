@@ -1,0 +1,71 @@
+id,bn,en,scientific,aliases,category
+bd001,জাম,Jamun,Syzygium cumini,জামের বীজ|জাম বীজ|কালো জাম|jam|jaam|jamun seed|black plum|java plum|Eugenia jambolana,herb
+bd002,মেথি,Fenugreek,Trigonella foenum-graecum,মেথী|methi|fenugreek seed,herb
+bd003,করলা,Bitter melon,Momordica charantia,করোলা|উচ্ছে|korola|karela|bitter gourd|bitter melon,herb
+bd004,অশ্বগন্ধা,Ashwagandha,Withania somnifera,অশ্বগন্ধা মূল|ashwagandha root|winter cherry|Indian ginseng,herb
+bd005,কালোজিরা,Black seed,Nigella sativa,কালো জিরা|কালিজিরা|kalojira|kalonji|black cumin|nigella,herb
+bd006,হলুদ,Turmeric,Curcuma longa,কাঁচা হলুদ|holud|haldi|turmeric root,herb
+bd007,আমলকী,Amla,Phyllanthus emblica,আমলকি|আমলা|amloki|amla|Indian gooseberry|Emblica officinalis,herb
+bd008,গুড়মার,Gymnema,Gymnema sylvestre,গুরমার|গুড়মার পাতা|gurmar|gudmar|gymnema,herb
+bd009,যষ্টিমধু,Licorice,Glycyrrhiza glabra,যষ্ঠিমধু|jashtimadhu|mulethi|liquorice|licorice root,herb
+bd010,শতমূলী,Shatavari,Asparagus racemosus,শতমূলি|shatamuli|shatavari,herb
+bd011,নিম,Neem,Azadirachta indica,নিম পাতা|neem leaf,herb
+bd012,তুলসী,Holy basil,Ocimum tenuiflorum,তুলসি|tulsi|tulasi|Ocimum sanctum,herb
+bd013,আদা,Ginger,Zingiber officinale,ada|ginger root,herb
+bd014,রসুন,Garlic,Allium sativum,রশুন|rasun|roshun,herb
+bd015,দারুচিনি,Cinnamon,Cinnamomum verum,daruchini|cinnamon bark|Cinnamomum zeylanicum|cassia,herb
+bd016,মধু,Honey,,modhu|honey,food
+bd017,ঘৃতকুমারী,Aloe vera,Aloe vera,অ্যালোভেরা|এলোভেরা|aloe|Aloe barbadensis,herb
+bd018,হরিতকী,Haritaki,Terminalia chebula,হরীতকী|haritaki|chebulic myrobalan,herb
+bd019,বহেড়া,Bibhitaki,Terminalia bellirica,বয়ড়া|bahera|baheda|beleric myrobalan,herb
+bd020,ত্রিফলা,Triphala,,triphala,herb_blend
+bd021,অর্জুন,Arjuna,Terminalia arjuna,অর্জুন ছাল|arjun|arjuna bark,herb
+bd022,শিলাজিৎ,Shilajit,,শিলাজিত|shilajit|mineral pitch,mineral
+bd023,সজনে,Moringa,Moringa oleifera,সজিনা|সজনে পাতা|sajna|moringa leaf|drumstick tree,herb
+bd024,চিরতা,Chirata,Swertia chirata,chirota|chiretta|Swertia chirayita,herb
+bd025,থানকুনি,Gotu kola,Centella asiatica,থানকুনি পাতা|thankuni|centella,herb
+bd026,ইসবগুল,Psyllium husk,Plantago ovata,ইসুবগুল|isabgul|isubgul|psyllium,fiber
+bd027,গোক্ষুর,Gokshura,Tribulus terrestris,গোক্ষুরা|gokshura|tribulus|puncture vine,herb
+bd028,সফেদ মুসলি,Safed musli,Chlorophytum borivilianum,সাদা মুসলি|safed musli|musli,herb
+bd029,তেজপাতা,Indian bay leaf,Cinnamomum tamala,tejpata|tej patta,herb
+bd030,সবুজ চা,Green tea,Camellia sinensis,গ্রিন টি|green tea extract|EGCG,herb
+bd031,জিনসেং,Ginseng,Panax ginseng,ginseng|Korean ginseng|Asian ginseng,herb
+bd032,পুদিনা,Mint,Mentha,pudina|peppermint|Mentha piperita,herb
+bd033,মৌরি,Fennel,Foeniculum vulgare,mouri|fennel seed,herb
+bd034,জিরা,Cumin,Cuminum cyminum,jira|cumin seed,herb
+bd035,গোলমরিচ,Black pepper,Piper nigrum,golmorich|piperine,herb
+bd036,লবঙ্গ,Clove,Syzygium aromaticum,lobongo|clove,herb
+bd037,এলাচ,Cardamom,Elettaria cardamomum,elach|cardamom,herb
+bd038,শিমুল মূল,Silk cotton tree root,Bombax ceiba,শিমুল|shimul|Bombax malabaricum,herb
+bd039,অশোক,Ashoka,Saraca asoca,ashok|ashoka bark|Saraca indica,herb
+bd040,ব্রাহ্মী,Brahmi,Bacopa monnieri,brahmi|bacopa|water hyssop,herb
+bd041,ভৃঙ্গরাজ,Bhringraj,Eclipta prostrata,কেশরাজ|কেশুত|bhringraj|Eclipta alba|false daisy,herb
+bd042,মেহেদি,Henna,Lawsonia inermis,মেহেদী|mehedi|henna,herb
+bd043,বাসক,Malabar nut,Justicia adhatoda,বাসক পাতা|basak|vasaka|Adhatoda vasica,herb
+bd044,কালমেঘ,Andrographis,Andrographis paniculata,kalmegh|king of bitters,herb
+bd045,গুলঞ্চ,Giloy,Tinospora cordifolia,গিলয়|gulancha|giloy|guduchi,herb
+bd046,বেল,Bael,Aegle marmelos,bel|bael fruit|wood apple,herb
+bd047,তিসি,Flaxseed,Linum usitatissimum,তিসি বীজ|tishi|linseed|flax seed,food
+bd048,চিয়া বীজ,Chia seed,Salvia hispanica,চিয়া সিড|chia,food
+bd049,স্পিরুলিনা,Spirulina,Arthrospira platensis,spirulina,algae
+bd050,প্রোবায়োটিক,Probiotics,,probiotic|lactobacillus,probiotic
+bd051,আপেল সিডার ভিনেগার,Apple cider vinegar,,এপেল সিডার ভিনেগার|apple cider vinegar|ACV,food
+bd052,গার্সিনিয়া,Garcinia cambogia,Garcinia gummi-gutta,গারসিনিয়া|garcinia|hydroxycitric acid|HCA,herb
+bd053,ভিটামিন ডি,Vitamin D,Cholecalciferol,ভিটামিন ডি৩|vitamin d3|cholecalciferol|vit d,vitamin
+bd054,ভিটামিন সি,Vitamin C,Ascorbic acid,vitamin c|ascorbic acid|vit c,vitamin
+bd055,ভিটামিন বি১২,Vitamin B12,Cobalamin,ভিটামিন বি ১২|vitamin b12|cyanocobalamin|methylcobalamin,vitamin
+bd056,ভিটামিন ই,Vitamin E,Tocopherol,vitamin e|alpha-tocopherol,vitamin
+bd057,ভিটামিন এ,Vitamin A,Retinol,vitamin a|retinol|beta-carotene,vitamin
+bd058,ফলিক অ্যাসিড,Folic acid,Folic acid,ফলিক এসিড|folate|vitamin b9,vitamin
+bd059,বায়োটিন,Biotin,Biotin,বায়োটিন|vitamin b7|vitamin h,vitamin
+bd060,ক্যালসিয়াম,Calcium,Calcium,ক্যালশিয়াম|calcium carbonate|calcium citrate,mineral
+bd061,আয়রন,Iron,Iron,লৌহ|আয়রণ|ferrous fumarate|ferrous sulfate,mineral
+bd062,জিংক,Zinc,Zinc,দস্তা|জিঙ্ক|zinc sulfate|zinc gluconate,mineral
+bd063,ম্যাগনেসিয়াম,Magnesium,Magnesium,ম্যাগনেশিয়াম|magnesium oxide,mineral
+bd064,ক্রোমিয়াম,Chromium,Chromium,chromium picolinate,mineral
+bd065,সেলেনিয়াম,Selenium,Selenium,selenium,mineral
+bd066,আয়োডিন,Iodine,Iodine,iodine,mineral
+bd067,পটাশিয়াম,Potassium,Potassium,potassium,mineral
+bd068,ওমেগা-৩,Omega-3 fatty acids,,ওমেগা ৩|omega 3|fish oil|EPA|DHA,fatty_acid
+bd069,কোলাজেন,Collagen,,collagen peptide|hydrolyzed collagen,protein
+bd070,কারকিউমিন,Curcumin,Curcuma longa,curcumin,herb_extract

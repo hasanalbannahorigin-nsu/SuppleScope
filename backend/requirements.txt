@@ -7,7 +7,7 @@ email-validator==2.2.0
 SQLAlchemy==2.0.36
 alembic==1.14.1
 # PostgreSQL driver is optional for local development; install separately when using the production database stack.
-# psycopg2-binary==2.9.10
+psycopg2-binary==2.9.10
 passlib==1.7.4
 bcrypt==4.2.1
 PyJWT==2.10.1
@@ -27,3 +27,5 @@ reportlab==4.2.5
 slowapi==0.1.9
 pytest==8.3.4
 pytest-asyncio==0.25.0
+# completed stack (light): main-content extraction for fetched pages
+trafilatura==2.0.0

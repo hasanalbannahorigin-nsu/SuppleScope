@@ -30,3 +30,26 @@ class ResearchDossierRecord(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     dossier_id: Mapped[str] = mapped_column(String(64), index=True)
     schema_version: Mapped[str] = mapped_column(String(16))
     payload: Mapped[dict] = mapped_column(JSONType)
+
+
+class VerificationRecord(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """VerifierOutput list (one per claim) from the claim verifier, for one dossier; latest row wins."""
+
+    __tablename__ = "verifications_v2"
+
+    advertisement_id: Mapped[str] = mapped_column(String(36), ForeignKey("advertisements.id"), index=True)
+    dossier_id: Mapped[str] = mapped_column(String(64), index=True)
+    verifier: Mapped[str] = mapped_column(String(160))
+    schema_version: Mapped[str] = mapped_column(String(16))
+    payload: Mapped[dict] = mapped_column(JSONType)
+
+
+class PatientRiskRecord(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """PatientRiskReport for one dossier and the saved patient context; latest row wins."""
+
+    __tablename__ = "patient_risk_v2"
+
+    advertisement_id: Mapped[str] = mapped_column(String(36), ForeignKey("advertisements.id"), index=True)
+    dossier_id: Mapped[str] = mapped_column(String(64), index=True)
+    schema_version: Mapped[str] = mapped_column(String(16))
+    payload: Mapped[dict] = mapped_column(JSONType)

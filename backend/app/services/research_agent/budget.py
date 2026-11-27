@@ -23,7 +23,9 @@ class Budget:
     max_seconds: int
     max_rounds: int = 3
     max_literature_calls: int = 40
+    max_lookup_calls: int = 40  # openFDA, NIH ODS, NCCIH, DSLD label records
     used_search_calls: int = 0
+    used_lookup_calls: int = 0
     used_literature_calls: int = 0
     used_fetches: int = 0
     used_llm_calls: int = 0
@@ -41,6 +43,7 @@ class Budget:
             max_seconds=s.research_max_seconds,
             max_rounds=s.research_max_rounds,
             max_literature_calls=s.research_max_literature_calls,
+            max_lookup_calls=s.research_max_lookup_calls,
         )
 
     @property
@@ -71,12 +74,16 @@ class Budget:
     def charge_literature(self) -> None:
         self._charge("literature", "used_literature_calls", "max_literature_calls")
 
+    def charge_lookup(self) -> None:
+        self._charge("lookup", "used_lookup_calls", "max_lookup_calls")
+
     def remaining(self, kind: str) -> int:
         return {
             "search": self.max_search_calls - self.used_search_calls,
             "fetch": self.max_fetches - self.used_fetches,
             "llm": self.max_llm_calls - self.used_llm_calls,
             "literature": self.max_literature_calls - self.used_literature_calls,
+            "lookup": self.max_lookup_calls - self.used_lookup_calls,
         }[kind]
 
     def snapshot(self) -> ResearchBudget:
@@ -86,6 +93,7 @@ class Budget:
             max_literature_calls=self.max_literature_calls,
             used_search_calls=self.used_search_calls, used_fetches=self.used_fetches, used_llm_calls=self.used_llm_calls,
             used_literature_calls=self.used_literature_calls,
+            max_lookup_calls=self.max_lookup_calls, used_lookup_calls=self.used_lookup_calls,
             elapsed_seconds=round(self.elapsed, 1), exhausted=self.exhausted_reason is not None,
             exhausted_reason=self.exhausted_reason,
         )
