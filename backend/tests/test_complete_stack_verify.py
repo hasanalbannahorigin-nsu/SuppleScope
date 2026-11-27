@@ -126,6 +126,45 @@ def test_findings_rank_above_title_background_aim_and_advice():
     assert [x.role for x in plain[:2]] == ["result", "aim"]  # relevance alone ranks the aim above a finding
 
 
+ASHWA = [
+    "With the global incidence of diabetes mellitus (DM) surpassing 366 million, interest in herbal remedies like "
+    "Ashwagandha has surged.",
+    "Systematic reviews indicate that Ashwagandha effectively restores altered blood glucose and glycosylated haemoglobin "
+    "(HbA1c) levels without significant safety concerns.",
+    "W. somnifera treatment in DM significantly restored the altered levels of blood glucose (experimental data; mean "
+    "difference, -196.27; 95% confidence interval [-220.96, -171.58]; p < .00001).",
+    "Withania somnifera Dunal, also known as Indian ginseng, has been in use since ancient times in the management of "
+    "diabetes mellitus (DM).",
+    "This systematic review and meta-analysis evaluated its effects on fasting blood glucose (FBG) and glycated hemoglobin.",
+]
+
+
+def test_roles_of_real_ashwagandha_sentences():
+    assert [sentence_role(x) for x in ASHWA] == ["background", "conclusion", "result", "background", "aim"]
+    # "significant potential" is not a measured result; "increasing amount of evidence" is background
+    assert sentence_role("According to an increasing amount of scientific and clinical evidence, this fruit shows "
+                         "significant potential for application in oral health management.") == "background"
+
+
+def test_one_outlying_cross_encoder_score_does_not_bury_findings():
+    pytest.importorskip("numpy")
+    scores = dict(zip(ASHWA, [9.0, 2.0, 1.5, 1.2, 1.0]))  # the background line scores far above the rest
+
+    class _Flat:
+        def encode(self, texts, normalize_embeddings=True):
+            return [[1.0, 0.0]] * len(texts)
+
+    class _Outlier:
+        def predict(self, pairs):
+            return [scores[s] for _, s in pairs]
+
+    docs = [Doc("n1", "s1", " ".join(ASHWA[:2]), "INGREDIENT|NARRATIVE_REVIEW"),
+            Doc("m1", "s2", " ".join(ASHWA[2:]), "INGREDIENT|META_ANALYSIS")]
+    out = SentenceSelector(encoder=_Flat(), reranker=_Outlier()).select("diabetes is cured blood glucose", docs)
+    assert [x.role for x in out[:2]] == ["conclusion", "result"]
+    assert out[2].role == "background" and out[-1].role == "aim"
+
+
 def test_at_most_two_sentences_per_study_before_others():
     out = SentenceSelector(mode="bm25", top_k=3).select("type 2 diabetes jambolan glucose", [JAMBOLAN, FENUGREEK])
     assert [x.doc_id for x in out].count("ev3") <= 2 and "ev4" in {x.doc_id for x in out}

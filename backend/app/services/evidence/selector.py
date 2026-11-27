@@ -16,8 +16,10 @@ Relevance alone favours sentences on the same topic: titles, background ("intere
 surged"), aims ("To investigate whether ...") and advice ("trials should be conducted"). The verifier needs the
 sentences that report findings, as in SciFact rationales. So each sentence gets a rhetorical role, from the
 abstract's own section label when it has one (BACKGROUND/OBJECTIVE/METHODS/RESULTS/CONCLUSIONS, the PubMed
-200k RCT scheme) and from wording cues otherwise, and result and conclusion sentences get a bonus
-(EVIDENCE_ROLE_BONUS, 0 turns it off). At most two sentences per study are taken before others are added, so
+200k RCT scheme) and from wording cues otherwise. Relevance is turned into a rank scale (1 = most relevant of
+the re-ranked pool, 0 = least); result and conclusion sentences gain EVIDENCE_ROLE_BONUS (default 0.35) and
+titles, background, aims and advice lose it, so a finding in the top 70% of the pool outranks the most
+relevant background line (0 = relevance only). At most two sentences per study are taken before others are added, so
 the premise covers several studies.
 """
 from __future__ import annotations
@@ -43,9 +45,10 @@ _CAPS_LABEL = re.compile(r"^([A-Z][A-Z &/,-]{2,60}):\s+")  # any upper-case PubM
 _HTML_HEADING = re.compile(r"<h\d[^>]*>\s*([^<]{2,60}?)\s*</h\d>", re.I)  # Europe PMC: "<h4>Results</h4>"
 _HTML_TAG = re.compile(r"<[^>]+>")
 
-# Rhetorical role of a sentence and its weight in the ranking (1 = reports what the study found).
-ROLE_WEIGHT = {"result": 1.0, "conclusion": 1.0, "other": 0.4, "methods": 0.15,
-               "background": 0.0, "aim": 0.0, "advice": 0.0, "title": 0.0}
+# Rhetorical role of a sentence and its weight in the ranking: +1 reports what a study found, -1 cannot
+# (title, background, aim, call for more research), 0 unknown.
+ROLE_WEIGHT = {"result": 1.0, "conclusion": 1.0, "other": 0.0, "methods": -0.5,
+               "background": -1.0, "aim": -1.0, "advice": -1.0, "title": -1.0}
 _SECTION_WORDS = (("result", ("RESULT", "FINDING")), ("conclusion", ("CONCLUSION", "INTERPRETATION", "DISCUSSION")),
                   ("methods", ("METHOD", "DESIGN", "SETTING", "PARTICIPANT", "PATIENT", "SUBJECT", "INTERVENTION",
                                "MEASURE", "MATERIAL", "DATA SOURCE", "SEARCH", "SELECTION")),
@@ -56,15 +59,19 @@ _STRONG_RESULT = re.compile(
     r"\bp\s*[<=>\u2264\u2265]\s*0?\.\d|\b95\s*%\s*ci\b|confidence interval|\b(?:w?md|smd|rr|hr|or)\s*[=:]\s*-?\d"
     r"|mean difference|odds ratio|risk ratio|hazard ratio|\d\s*(?:mg/dl|mmol/l)"
     r"|\bno (?:statistically )?(?:significant )?(?:differences?|effects?|changes?|improvements?|reductions?|benefits?)\b"
-    r"|\bdid not (?:significantly )?(?:differ|change|improve|reduce|lower|affect|alter|show)|\bsignificant(?:ly)?\b", re.I)
+    r"|\bdid not (?:significantly )?(?:differ|change|improve|reduce|lower|affect|alter|show)|\bstatistically significant"
+    r"|\bsignificantly (?:\w+ )?(?:reduc|decreas|lower|improv|increas|elevat|restor|attenuat|inhibit|alter|differ|associat|better|worse|higher|great|less|more)"
+    r"|\bsignificant (?:\w+ )?(?:reductions?|decreases?|improvements?|increases?|differences?|effects?|changes?|associations?|declines?)\b",
+    re.I)
 _ADVICE = re.compile(
     r"\bshould be (?:conducted|performed|undertaken|carried out|explored|investigated|confirmed|evaluated)"
     r"|\b(?:further|more|future|larger|additional) (?:[\w-]+ ){0,2}(?:research|studies|trials|investigations?)\b"
     r"|\b(?:are|is|remain) (?:still )?(?:needed|warranted|required)\b", re.I)
 _AIM = re.compile(
     r"^(?:to (?:investigate|evaluate|assess|determine|examine|compare|explore|test|review|summari[sz]e)\b"
-    r"|(?:this|the present|the current|our) (?:study|review|trial|meta-analysis|systematic review|work|paper) "
-    r"(?:aim(?:s|ed)?|was designed|is designed|sought)\b|(?:we|the authors) (?:aim(?:ed)?|sought|set out)\b"
+    r"|(?:this|the present|the current|our) (?:[\w-]+ ){0,4}?(?:study|review|trial|meta-analysis|analysis|work|paper) "
+    r"(?:aim(?:s|ed)?|was designed|is designed|sought|evaluat(?:ed|es)|assess(?:ed|es)|investigat(?:ed|es)|examin(?:ed|es)"
+    r"|explor(?:ed|es)|summari[sz](?:ed|es)|compar(?:ed|es))\b|(?:we|the authors) (?:aim(?:ed)?|sought|set out)\b"
     r"|the (?:aim|objective|purpose|goal)s? (?:of|was|is)\b)", re.I)
 _CONCLUSION = re.compile(
     r"\bin conclusion\b|\bwe conclude\b|\b(?:these|our|the) (?:results|findings|data) (?:suggest|indicate|show|demonstrate|support|confirm)"
@@ -76,7 +83,9 @@ _BACKGROUND = re.compile(
     r"\b(?:prevalence|incidence|worldwide|globally|global burden|epidemic)\b|\bglobal (?:incidence|prevalence)"
     r"|\bis an? (?:major|common|growing|serious|chronic|leading)\b|\b(?:has|have) (?:surged|grown|gained|attracted)\b"
     r"|\binterest in\b|\b(?:is|are|has been|have been) (?:widely|commonly|traditionally|frequently|extensively) used\b"
-    r"|\btraditional(?:ly)? (?:medicine|use|used)\b|\blittle is known\b|\bremains? (?:unclear|unknown|controversial)\b", re.I)
+    r"|\btraditional(?:ly)? (?:medicine|use|used)\b|\blittle is known\b|\bremains? (?:unclear|unknown|controversial)\b"
+    r"|\bsince ancient times\b|\bfor (?:centuries|thousands of years)\b|\b(?:has|have) been in use\b|\balso known as\b"
+    r"|\b(?:increasing|growing) (?:amount|number|body) of\b", re.I)
 _METHODS = re.compile(
     r"\bwere randomi[sz]ed\b|\brandomly (?:assigned|allocated)\b|\bwere (?:enrolled|recruited|included|allocated|assigned|divided)\b"
     r"|\b(?:we|were) searched\b|\bdatabases? (?:were|was) searched\b|\bdata were (?:extracted|analy[sz]ed|pooled)\b"
@@ -202,6 +211,15 @@ def _cross_encoder(name: str):
     return CrossEncoder(name)
 
 
+def _rank_scale(values: dict[int, float]) -> dict[int, float]:
+    """1.0 for the most relevant candidate, falling evenly to 0.0 for the least; ties share a value.
+    Unlike min-max, one very high cross-encoder logit does not squeeze every other candidate towards 0."""
+    n = len(values)
+    if n <= 1:
+        return {i: 1.0 for i in values}
+    return {i: 1.0 - sum(w > v for w in values.values()) / (n - 1) for i, v in values.items()}
+
+
 def _minmax(xs: list[float]) -> list[float]:
     if not xs:
         return xs
@@ -273,12 +291,12 @@ class SentenceSelector:
             order = [i for i in order if bm[i] > 0]  # no word in common with the claim
         if rr is not None and enc is not None and order:
             ce = [float(x) for x in rr.predict([(query, uniq[i][1]) for i in order])]
-            relevance = dict(zip(order, _minmax(ce)))
+            relevance = _rank_scale(dict(zip(order, ce)))
             retriever = "bm25+embedding+cross-encoder"
         else:
-            relevance = dict(zip(order, _minmax([score[i] for i in order])))
+            relevance = _rank_scale({i: score[i] for i in order})
         # findings first: relevance plus a bonus for result / conclusion sentences
-        final = {i: relevance[i] + self.role_bonus * ROLE_WEIGHT.get(roles[i], 0.4) for i in order}
+        final = {i: relevance[i] + self.role_bonus * ROLE_WEIGHT.get(roles[i], 0.0) for i in order}
         order = sorted(order, key=lambda i: -final[i])
         picked, spare, per_doc = [], [], Counter()
         for i in order:  # at most per_doc sentences of one study first, then fill up with the rest
