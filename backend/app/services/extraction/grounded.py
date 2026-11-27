@@ -31,7 +31,7 @@ from app.schemas.research.ocr import OcrDocument
 from app.services.llm.client import JsonLlm
 from app.services.text.bangla import match_key, missing_words, normalize, numbers_in, span_score
 
-EXTRACTOR_VERSION = "1.1.0"  # 1.1: word-level claim and ingredient grounding
+EXTRACTOR_VERSION = "1.2.0"  # 1.1: word-level grounding; 1.2: all claim words required, cleaning cannot add words
 SPAN_THRESHOLD = 85  # evidence vs (cleaned) ad text
 RAW_THRESHOLD = 70  # evidence vs raw OCR, so cleaning cannot invent text
 CONTENT_THRESHOLD = 50  # item text vs its own evidence
@@ -182,9 +182,9 @@ def check_grounding(ex: _Extraction, cleaned: str, raw: str) -> list[_Issue]:
             issues.append(_Issue(path, "item text does not match its evidence"))
         if path.startswith(("claims", "ingredients")):
             # word by word, vowel signs kept: "বিটা সেল উৎপাদন করবে" must not pass for "ইনসুলিন উৎপাদন করবে"
-            if own and (miss := missing_words(own, ev)):
+            if own and (miss := missing_words(own, ev, min_coverage=1.0)):
                 issues.append(_Issue(path, f"words not in its evidence: {', '.join(miss)}"))
-            if miss_ev := missing_words(ev, cleaned):
+            if miss_ev := missing_words(ev, cleaned, min_coverage=1.0):
                 issues.append(_Issue(path, f"evidence words not in the ad text: {', '.join(miss_ev)}"))
     return issues
 
@@ -236,6 +236,23 @@ def _locate(evidence: str, doc: OcrDocument) -> TextSpan:
     )
 
 
+def keep_ocr_where_words_invented(cleaned: _Cleaned, raw: str) -> _Cleaned:
+    """Cleaning may fix characters, not add words. A cleaned line with a word that has no match in the raw OCR
+    (e.g. garbage "মাজে" turned into "সমাজ", or an added "ডায়াবেটিস") goes back to its raw OCR line; if the
+    line count changed, the whole cleaning is dropped."""
+    raw_lines, lines = raw.split("\n"), cleaned.text.split("\n")
+    bad = {i: w for i, line in enumerate(lines) if (w := missing_words(line, raw, min_coverage=1.0))}
+    if not bad:
+        return cleaned
+    if len(lines) != len(raw_lines):
+        return _Cleaned(text=raw, edits=["[cleaning discarded: added words not in the OCR text: "
+                                         + ", ".join(w for ws in bad.values() for w in ws) + "]"])
+    for i, words in bad.items():
+        lines[i] = raw_lines[i]
+    notes = [f"[line {i + 1} kept as OCR: '{', '.join(ws)}' not in the OCR text]" for i, ws in bad.items()]
+    return _Cleaned(text="\n".join(lines), edits=cleaned.edits + notes)
+
+
 @dataclass
 class ExtractionRun:
     extraction: AdExtraction
@@ -253,7 +270,7 @@ class GroundedExtractor:
         out.text = normalize(out.text)
         if fuzz.ratio(match_key(out.text), match_key(raw)) < 70:  # rewrote too much: keep raw
             return _Cleaned(text=raw, edits=["[cleaning discarded: changed too much]"])
-        return out
+        return keep_ocr_where_words_invented(out, raw)
 
     def run(self, doc: OcrDocument) -> ExtractionRun:
         raw = normalize(doc.full_text)

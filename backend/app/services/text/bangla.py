@@ -78,12 +78,11 @@ FUNCTION_WORDS = frozenset(letters_key(w) for w in """করবে করে ক
     ও এবং আর বা থেকে জন্য এর এ কে না নয় সাথে সঙ্গে the and or of to is are be will can""".split())
 
 
-def missing_words(text: str, source: str, threshold: float = 80.0, min_coverage: float = 0.75) -> list[str]:
-    """Content words of `text` (2+ characters, not FUNCTION_WORDS) that do not occur in `source`, spaces
-    ignored so OCR-joined words still count. Returns them only when fewer than `min_coverage` are found."""
-    words = [w for w in letters_key(text).split() if len(w) >= 2 and w not in FUNCTION_WORDS]
-    if not words:
-        return []
+def _content_words(text: str) -> list[str]:
+    return [w for w in letters_key(text).split() if len(w) >= 2 and w not in FUNCTION_WORDS]
+
+
+def _word_finder(source: str, threshold: float):
     hay = letters_key(source).replace(" ", "")
     bare_hay = _bare(hay)
 
@@ -93,6 +92,17 @@ def missing_words(text: str, source: str, threshold: float = 80.0, min_coverage:
         # short words differ by one vowel sign after OCR ("দুর" / "দূর"): compare the letters without signs
         return len(w) <= 4 and len(_bare(w)) >= 2 and _bare(w) in bare_hay
 
+    return found
+
+
+def missing_words(text: str, source: str, threshold: float = 80.0, min_coverage: float = 0.75) -> list[str]:
+    """Content words of `text` (2+ characters, not FUNCTION_WORDS) that do not occur in `source`, spaces
+    ignored so OCR-joined words still count. Returns them only when fewer than `min_coverage` are found
+    (min_coverage=1.0: any missing word)."""
+    words = _content_words(text)
+    if not words:
+        return []
+    found = _word_finder(source, threshold)
     miss = [w for w in words if not found(w)]
     return miss if (len(words) - len(miss)) / len(words) < min_coverage else []
 
