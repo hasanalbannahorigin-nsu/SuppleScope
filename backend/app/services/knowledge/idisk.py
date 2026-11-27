@@ -1,10 +1,15 @@
 """iDISK2.0 (integrated Dietary Supplement Knowledge base, Hou et al., JMIR 2025) in a local SQLite file.
 
-iDISK2.0 is published as CSV files (dsi.csv ingredients, dsp.csv products, disease.csv, drug.csv,
-symptom.csv, relationships.csv) at github.com/houyurain/iDISK2.0. Their exact column names are not
-documented in the README, so the loader guesses the id / name / synonym / relation columns from the
-headers and prints its guess (`python scripts/load_idisk.py inspect <folder>`); a JSON mapping file
-can override any guess. The older iDISK 1.x RRF release (MRCONSO/MRREL/MRSTY/MRSAT, pipe-delimited)
+iDISK2.0 (github.com/houyurain/iDISK2.0) keeps only README files in the repository; the CSV files are on
+Google Drive (links in Data/Entity/README.md and Data/Relation/README.md):
+  entities  DSI.csv, DSP.csv, D.csv (drugs), Dis.csv (diseases), SS.csv (signs/symptoms)
+            columns iDISK_ID, Name, CUI, then attributes (DSI: Background, Safety, Mechanism of action,
+            Source Material; DSP: Company Name, Company Address, Product Purpose, Product Risk)
+  relations dsp_dsi.csv, dsi_dis.csv, dsi_d.csv, dsi_ss.csv
+            columns <code of one side>, Relation, <code of the other side>, Source, ratings, Source Description
+            (e.g. DSI, Relation, D, Source, Interaction Rating, Source Description)
+The loader guesses the id / name / relation columns from the headers and prints its guess
+(`python scripts/load_idisk.py inspect <folder>`); a JSON mapping file can override any guess. The older iDISK 1.x RRF release (MRCONSO/MRREL/MRSTY/MRSAT, pipe-delimited)
 is also read when those files are present.
 
 The data are not stored in the repository. Check the data licence before sharing the database: the
@@ -29,9 +34,9 @@ from app.services.knowledge.normalise import name_key
 
 csv.field_size_limit(min(sys.maxsize, 2**31 - 1))
 
-TYPE_BY_STEM = {"dsi": "DSI", "sdsi": "DSI", "dsp": "DSP", "disease": "Disease", "dis": "Disease", "drug": "Drug",
+TYPE_BY_STEM = {"dsi": "DSI", "sdsi": "DSI", "dsp": "DSP", "disease": "Disease", "dis": "Disease", "drug": "Drug", "d": "Drug",
                 "spd": "Drug", "symptom": "Symptom", "ss": "Symptom", "soc": "SOC", "tc": "TC"}
-ID_COLS = ("id:id", ":id", "id", "cui", "entity_id", "node_id", "concept_id", "dsi_id", "dsp_id", "disease_id", "drug_id",
+ID_COLS = ("idisk_id", "id:id", ":id", "id", "cui", "entity_id", "node_id", "concept_id", "dsi_id", "dsp_id", "disease_id", "drug_id",
            "symptom_id", "idisk_id", "dsi_cui", "dsp_cui")
 NAME_COLS = ("name", "preferred_name", "pref_name", "preferred_term", "term", "str", "title", "ingredient_name",
              "product_name", "dsi_name", "dsp_name", "disease_name", "drug_name", "symptom_name", "common_name")
@@ -40,6 +45,8 @@ START_COLS = (":start_id", "start_id", "start", "source", "source_id", "head", "
               "cui1", "src", "node1", "entity1")
 END_COLS = (":end_id", "end_id", "end", "target", "target_id", "tail", "tail_id", "object", "object_id", "to", "cui2",
             "dst", "node2", "entity2")
+# iDISK2.0 relation files name their two id columns after the entity codes (dsi_d.csv: DSI, Relation, D, Source ...).
+CODE_COLS = ("dsp", "dsi", "d", "dis", "ss", "drug", "disease", "symptom")
 REL_COLS = (":type", "type", "relation", "relation_type", "relationship", "rel", "predicate", "edge_type", "label")
 TEXT_HINTS = ("safety", "warning", "caution", "adverse", "interaction", "mechanism", "background", "description",
               "effect", "dose", "dosage", "pregnan", "toxicity", "contraindication")
@@ -80,6 +87,15 @@ def _pick(headers: list[str], wanted: tuple[str, ...], *, contains: bool = False
     return None
 
 
+def _clip(text: str, size: int = 600) -> str:
+    """Long attribute text (e.g. an interaction's Source Description) cut at a word boundary, not dropped."""
+    text = " ".join(text.split())
+    if len(text) <= size:
+        return text
+    cut = text.rfind(" ", 0, size)
+    return text[:cut if cut > size // 2 else size]
+
+
 def _sniff(path: Path) -> csv.Dialect | str:
     sample = path.open(encoding="utf-8-sig", errors="replace").read(20000)
     try:
@@ -108,6 +124,11 @@ def guess_map(path: Path) -> FileMap:
         reader = csv.reader(fh, _sniff(path))
         headers = next(reader, [])
     stem = path.stem.lower()
+    codes = [h for h in headers if _norm(h) in CODE_COLS]
+    rel = _pick(headers, REL_COLS) or _pick(headers, REL_COLS, contains=True)
+    if len(codes) >= 2 and rel:  # iDISK2.0 layout; checked first because its "Source" column is provenance
+        return FileMap(path=str(path), kind="relations", headers=headers, start_col=codes[0], end_col=codes[1],
+                       rel_col=rel)
     start, end = _pick(headers, START_COLS), _pick(headers, END_COLS)
     if "relation" in stem or "edge" in stem or (start and end):
         return FileMap(path=str(path), kind="relations", headers=headers,
@@ -356,7 +377,7 @@ class IdiskStore:
         for n in names:
             row = self.con.execute(
                 "SELECT n.entity_id, e.name, e.type, n.name FROM names n JOIN entities e ON e.id = n.entity_id "
-                "WHERE n.key = ? ORDER BY CASE WHEN e.type IN ('DSI','SDSI') THEN 0 ELSE 1 END LIMIT 1",
+                "WHERE n.key = ? AND (e.type IN ('DSI','SDSI') OR e.type IS NULL) LIMIT 1",  # never a product (DSP)
                 (name_key(n),)).fetchone()
             if row:
                 return IdiskMatch(row[0], row[1], row[2], 100.0, row[3])
@@ -385,10 +406,12 @@ class IdiskStore:
         subject = name_row[0] if name_row else entity_id
         out: list[IdiskFact] = []
         rows = self.con.execute(
+            # product -> ingredient edges (317,062 in iDISK2.0) are skipped in SQL, or they would fill the limit
             "SELECT r.relation, r.object, e.name, e.type, r.attrs FROM relations r LEFT JOIN entities e ON e.id = r.object "
-            "WHERE r.subject = ? UNION ALL "
+            "WHERE r.subject = ? AND lower(r.relation) NOT LIKE '%ingredient%' UNION ALL "
             "SELECT r.relation, r.subject, e.name, e.type, r.attrs FROM relations r LEFT JOIN entities e ON e.id = r.subject "
-            "WHERE r.object = ? LIMIT ?", (entity_id, entity_id, limit)).fetchall()
+            "WHERE r.object = ? AND lower(r.relation) NOT LIKE '%ingredient%' LIMIT ?",
+            (entity_id, entity_id, limit)).fetchall()
         for rel, other, other_name, other_type, attrs in rows:
             kind = relation_kind(rel, other_type)
             if kind == "has_ingredient":
@@ -397,7 +420,7 @@ class IdiskStore:
             extra = ""
             try:
                 a = json.loads(attrs or "{}")
-                extra = "; ".join(f"{k}: {v}" for k, v in a.items() if isinstance(v, str) and len(v) < 300 and k != "rui")
+                extra = "; ".join(f"{k}: {_clip(v)}" for k, v in a.items() if isinstance(v, str) and v.strip() and k != "rui")
             except ValueError:
                 pass
             text = f"iDISK2.0: {subject} {rel} {value}" + (f" ({extra})" if extra else "") + "."

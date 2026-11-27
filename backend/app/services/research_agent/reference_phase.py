@@ -145,6 +145,20 @@ class ReferencePhase:
             elif fact.kind == "caution":
                 safety.disease_cautions.append(DiseaseCaution(condition=fact.value.lower()[:120], description=fact.text[:500],
                                                               finding_ids=[fid]))
+            elif fact.kind == "attribute" and "safety" in fact.relation.lower():
+                # The DSI "Safety" text (from MSKCC / LNHPD) holds the cautions; split it like a fact sheet.
+                for sent in F.safety_sentences(fact.value, limit=10):
+                    drug, cond = _drug(sent), _condition(sent)
+                    sid = self._finding(ing, "idisk_safety", (drug or cond or "safety")[:120], src.source_id, sent)
+                    fids.append(sid)
+                    if drug:
+                        safety.drug_interactions.append(DrugInteraction(drug_or_class=drug, description=sent[:500],
+                                                                        finding_ids=[sid]))
+                    elif cond:
+                        safety.disease_cautions.append(DiseaseCaution(condition=cond, description=sent[:500],
+                                                                      finding_ids=[sid]))
+                    else:
+                        safety.side_effects.append(SafetyItem(description=sent[:500], finding_ids=[sid]))
 
     def _sheet(self, db, ing, english, links, fids, safety) -> None:
         fetch = self.sheet_fetchers[db]

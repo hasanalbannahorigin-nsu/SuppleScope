@@ -1,6 +1,7 @@
 """Completed stack, research side: literature filter, registry, openFDA, trafilatura, merged search, product
 sources, dictionary normalisation, iDISK2.0, fact sheets and the reference phase. All offline (fixtures)."""
 import json
+from pathlib import Path
 
 import pytest
 
@@ -290,6 +291,68 @@ def test_idisk_loader_guesses_columns_and_answers_lookups(tmp_path):
     assert facts["interaction"].value == "Insulin" and facts["effective_for"].value == "Type 2 diabetes"
     assert "monitor with diabetes medicines" in facts["attribute"].text
     assert relation_kind("has_adverse_effect_on") == "adverse_effect"
+
+
+def _idisk2_release(tmp_path):
+    """The layout of the Google Drive release described in iDISK2.0's Data/*/README.md."""
+    ent, rel = tmp_path / "Data" / "Entity", tmp_path / "Data" / "Relation"
+    ent.mkdir(parents=True)
+    rel.mkdir(parents=True)
+    (ent / "README.md").write_text("readme")
+    (ent / "DSI.csv").write_text(
+        "iDISK_ID,Name,CUI,Background,Safety,Mechanism of action,Source Material\n"
+        'DSI000101,Trigonella foenum-graecum,C0331707,Fenugreek is a herb.,"Fenugreek may lower blood sugar too much when '
+        'taken with diabetes medicines. It should be avoided during pregnancy. It is a member of the pea family.",x,seed\n'
+        "DSI000102,Selenium,C0036581,Selenium is a mineral.,,,\n", encoding="utf-8")
+    (ent / "DSP.csv").write_text("iDISK_ID,Name,CUI,Company Name\nDSP000001,Fenugreek,,Acme\n", encoding="utf-8")
+    (ent / "D.csv").write_text("iDISK_ID,Name,CUI\nD000001,Antidiabetic drugs,C0935929\n", encoding="utf-8")
+    (ent / "Dis.csv").write_text("iDISK_ID,Name,CUI\nDis000001,Diabetes,C0011849\n", encoding="utf-8")
+    long_desc = "Fenugreek may have additive hypoglycemic effects with antidiabetic drugs. " * 12
+    (rel / "dsi_d.csv").write_text("DSI,Relation,D,Source,Interaction Rating,Source Description\n"
+                                   f'DSI000101,interacts_with,D000001,MSKCC,Moderate,"{long_desc}"\n', encoding="utf-8")
+    (rel / "dsi_dis.csv").write_text("DSI,Relation,Dis,Source\nDSI000101,is_effective_for,Dis000001,MSKCC\n",
+                                     encoding="utf-8")
+    rows = "".join(f"DSP{n:06d},has_ingredient,DSI000101\n" for n in range(120))  # more edges than the facts limit
+    (rel / "dsp_dsi.csv").write_text("DSP,Relation,DSI\n" + rows, encoding="utf-8")
+    return tmp_path / "Data"
+
+
+def test_idisk2_release_layout(tmp_path):
+    folder = _idisk2_release(tmp_path)
+    maps = {Path(m.path).name: m for m in discover(folder)}
+    assert maps["DSI.csv"].id_col == "iDISK_ID" and maps["DSI.csv"].entity_type == "DSI"
+    assert maps["D.csv"].entity_type == "Drug" and maps["Dis.csv"].entity_type == "Disease"
+    assert "Safety" in maps["DSI.csv"].text_cols
+    d = maps["dsi_d.csv"]
+    assert (d.kind, d.start_col, d.rel_col, d.end_col) == ("relations", "DSI", "Relation", "D")  # not "Source"
+    assert (maps["dsp_dsi.csv"].start_col, maps["dsp_dsi.csv"].end_col) == ("DSP", "DSI")
+    counts = build_database(folder, tmp_path / "idisk.sqlite")
+    assert counts["relations"] == 122
+    store = IdiskStore(tmp_path / "idisk.sqlite")
+    m = store.match(["fenugreek", "Trigonella foenum-graecum"])
+    assert m.entity_id == "DSI000101"  # the ingredient, never the product called "Fenugreek"
+    facts = store.facts(m.entity_id)
+    inter = next(f for f in facts if f.kind == "interaction")
+    assert inter.value == "Antidiabetic drugs" and "Interaction Rating: Moderate" in inter.text
+    assert "additive hypoglycemic effects" in inter.text and len(inter.text) < 800  # long description clipped, kept
+    assert any(f.kind == "effective_for" for f in facts)
+    assert any(f.kind == "attribute" and f.relation == "Safety" for f in facts)
+
+
+def test_reference_phase_reads_idisk2_safety_text(tmp_path):
+    from app.schemas.research.ingredient import IngredientResearch, IngredientSafety
+    build_database(_idisk2_release(tmp_path), tmp_path / "idisk.sqlite")
+    state = ResearchState(budget=Budget(max_search_calls=1, max_fetches=1, max_llm_calls=1, max_retries_per_call=0,
+                                        max_seconds=60, max_lookup_calls=5), llm=FakeLlm(), search_provider=FakeSearch())
+    ing = IngredientResearch(ingredient_id="i1", name="মেথি", origin="AD_ONLY", status=ResearchStatus.NOT_SEARCHED,
+                             safety=IngredientSafety(status=ResearchStatus.NOT_SEARCHED))
+    out = ReferencePhase(state, idisk=IdiskStore(tmp_path / "idisk.sqlite"), sources={"idisk"}, use_openfda=False).enrich(
+        ing, ["Fenugreek"])
+    assert any(k.database == "iDISK2.0" and k.entity_id == "DSI000101" for k in out.knowledge_links)
+    texts = [x.description for x in out.safety.drug_interactions] + [x.description for x in out.safety.disease_cautions]
+    assert any("too much when taken with diabetes medicines" in t for t in texts)
+    assert any("avoided during pregnancy" in x.description for x in out.safety.disease_cautions)
+    assert not any("pea family" in t for t in texts)
 
 
 def test_idisk_1x_rrf_files(tmp_path):

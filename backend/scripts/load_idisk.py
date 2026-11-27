@@ -1,13 +1,18 @@
 """Build the local iDISK2.0 SQLite database used by the research agent and patient-risk step.
 
-1. Download the iDISK2.0 CSV files (github.com/houyurain/iDISK2.0, folder Data/) to e.g. D:\\CSE499\\iDISK2.0\\Data
-   (check the data licence first; do not commit the data to the repository).
+1. The iDISK2.0 repository (github.com/houyurain/iDISK2.0, Apache-2.0) holds only README files. Download the
+   two Google Drive folders linked in its Data/Entity/README.md and Data/Relation/README.md, and unzip them, e.g.
+   to D:\\CSE499\\iDISK2.0\\Data\\Entity (DSI.csv, DSP.csv, D.csv, Dis.csv, SS.csv) and
+   D:\\CSE499\\iDISK2.0\\Data\\Relation (dsp_dsi.csv, dsi_dis.csv, dsi_d.csv, dsi_ss.csv).
+   Do not commit the data to the repository.
 2. See how the loader reads the columns:   python scripts/load_idisk.py inspect D:\\CSE499\\iDISK2.0\\Data
+   (subfolders are searched; an empty or zipped folder is explained)
 3. Build the database:                     python scripts/load_idisk.py load D:\\CSE499\\iDISK2.0\\Data
    (writes IDISK_DB_PATH, default backend/data/knowledge/idisk.sqlite)
 4. Try a lookup:                           python scripts/load_idisk.py lookup "fenugreek"
+   (iDISK2.0 names herbs by their scientific name; the Bangla-Latin dictionary adds it, as in the agent)
 If a column is guessed wrong, write a JSON file such as
-  {"dsi.csv": {"name_col": "Preferred_Name", "synonym_cols": ["Synonyms"]}}
+  {"DSI.csv": {"name_col": "Name", "synonym_cols": []}}
 and pass it with --map mapping.json. iDISK 1.x RRF folders (MRCONSO.RRF ...) are read too.
 """
 from __future__ import annotations
@@ -52,7 +57,9 @@ def main() -> None:
         print(f"built {args.db}: {counts}")
     else:
         store = IdiskStore(Path(args.db))
-        m = store.match([args.target])
+        from app.services.knowledge.normalise import default_normaliser
+        nz = default_normaliser().normalise(args.target)  # adds the scientific name iDISK2.0 uses for herbs
+        m = store.match([args.target, *(nz.search_names if nz.entry_id else [])])
         if not m:
             print("no match")
             return

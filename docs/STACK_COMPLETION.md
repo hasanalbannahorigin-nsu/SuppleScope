@@ -51,8 +51,10 @@ The Report page has two new tabs, **Claim Verification** and **Patient Risk**. D
 1. **Install and check the live APIs.** `pip install -r backend/requirements.txt`, then
    `python backend/scripts/check_external_apis.py`. The DSLD and ClinicalTrials.gov field names were written from the
    public API structure but could not be called from the build machine; this script confirms them in one run.
-2. **iDISK2.0 data.** Download the CSV files from github.com/houyurain/iDISK2.0 (folder `Data/`), check the data licence,
-   then `python backend/scripts/load_idisk.py inspect <folder>` and `... load <folder>`. Do not commit the data.
+2. **iDISK2.0 data.** The repository github.com/houyurain/iDISK2.0 (Apache-2.0) holds only READMEs; download the two
+   Google Drive folders linked in `Data/Entity/README.md` and `Data/Relation/README.md`, unzip them under
+   `D:\CSE499\iDISK2.0\Data`, then `python backend/scripts/load_idisk.py inspect <folder>` and `... load <folder>`.
+   Do not commit the data.
 3. **Train the verifier.** Open `backend/verifier_training/SuppleScope_verifier_training.ipynb` in Colab or Kaggle (T4 GPU),
    run all cells, download `verifier_models.zip`, unzip into `backend/models/` and set
    `VERIFIER_MODEL_DIRS=models/verifier-roberta,models/verifier-pubmedbert`. Until then the verifier runs in rules mode.
