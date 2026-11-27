@@ -39,7 +39,7 @@ class ResearchBudget(Strict):
     used_lookup_calls: int = 0
     elapsed_seconds: float = 0
     exhausted: bool = False
-    exhausted_reason: str | None = Field(None, description="'search', 'fetch', 'llm', 'literature', 'lookup', 'time'")
+    exhausted_reason: str | None = Field(None, description="'search', 'fetch', 'llm', 'literature', 'lookup', 'time', 'llm_daily_quota'")
 
 
 class AgentInfo(Strict):

@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 
 from app.schemas.research.common import Conflict, Finding, MissingItem, Source, SourceType
 from app.schemas.research.dossier import LogEntry
-from app.services.llm.client import JsonLlm
+from app.services.llm.client import JsonLlm, QuotaExhausted
 from app.services.research_agent.budget import Budget, BudgetExhausted
 from app.services.research_agent.tools.cache import NullCache
 from app.services.research_agent.tools.fetch import FetchedDoc, doc_from_json, doc_to_json
@@ -247,10 +247,21 @@ class ResearchState:
         return src
 
     def llm_parse(self, system: str, user: str, schema, phase: str, label: str):
+        if self.budget.exhausted_reason == "llm_daily_quota":
+            raise BudgetExhausted("llm_daily_quota")
         try:
             out = self.llm.parse(system, user, schema, counter=self.budget)
         except BudgetExhausted:
             raise
+        except QuotaExhausted as exc:
+            # The daily limit will not come back during this run: stop every LLM step the way a spent budget does,
+            # so the dossier says which parts were not researched instead of filling them from failed calls.
+            self.add_log(phase, "read" if label.startswith("read") else "plan", tool=f"llm:{label}", error=str(exc)[:300])
+            note = f"Research stopped early: {exc}"
+            if note not in self.uncertainties:
+                self.uncertainties.append(note)
+            self.budget.exhausted_reason = "llm_daily_quota"
+            raise BudgetExhausted("llm_daily_quota") from exc
         except Exception as exc:
             self.add_log(phase, "read" if label.startswith("read") else "plan", tool=f"llm:{label}", error=str(exc)[:300])
             return None

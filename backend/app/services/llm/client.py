@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import time
 from typing import Protocol, TypeVar
 
@@ -22,6 +23,31 @@ T = TypeVar("T", bound=BaseModel)
 
 class LlmError(RuntimeError):
     pass
+
+
+class QuotaExhausted(LlmError):
+    """The provider's daily request limit is used up. Retrying cannot help until it resets."""
+
+
+def _wait_text(seconds: int) -> str:
+    hours, minutes = divmod(max(1, round(seconds / 60)), 60)
+    return f"{hours}h{minutes:02d}m" if hours else f"{minutes} min"
+
+
+def daily_quota_message(text: str, model: str = "") -> str | None:
+    """A short message when a 429 reply is a per-day quota (free-tier Gemini), else None.
+    Per-minute limits return None: those clear up after a short wait."""
+    if not re.search(r"PerDay|per day", text, flags=re.IGNORECASE):
+        return None
+    limit = re.search(r"limit: (\d+)", text)
+    name = re.search(r"model: ([\w.\-]+)", text)
+    delay = re.search(r"retryDelay\W+(\d+)s", text)
+    msg = f"Gemini daily request limit used up for {name.group(1) if name else model or 'this model'}"
+    if limit:
+        msg += f" ({limit.group(1)} requests a day)"
+    if delay:
+        msg += f"; it resets in about {_wait_text(int(delay.group(1)))}"
+    return msg + ". Try again then, or set another LLM_MODEL in .env."
 
 
 class CallCounter(Protocol):
@@ -93,6 +119,8 @@ class GeminiNativeClient:
         headers = {"x-goog-api-key": self.api_key, "Content-Type": "application/json"}
         for attempt in range(self.max_retries + 1):
             r = self.http.post(url, json=body, headers=headers)
+            if r.status_code == 429 and (quota := daily_quota_message(r.text, name)):
+                raise QuotaExhausted(quota)
             if r.status_code in (429, 500, 502, 503, 504) and attempt < self.max_retries:
                 time.sleep(min(60, 5 * 2 ** attempt))
                 continue
@@ -127,6 +155,7 @@ class OpenAICompatibleLlm:
 
     # Free-tier Gemini often answers 503 "high demand" or 429 "quota" for a while.
     # Wait and try again (15s, 30s, 60s, 120s) instead of failing the whole run.
+    # A used-up daily quota is the exception: it fails at once with a short QuotaExhausted.
     BUSY_STATUS = (429, 500, 502, 503, 504)
     BUSY_WAITS = (15, 30, 60, 120)
 
@@ -138,6 +167,8 @@ class OpenAICompatibleLlm:
                 )
             except Exception as exc:
                 status = getattr(exc, "status_code", None)
+                if status == 429 and (quota := daily_quota_message(str(exc), self.model)):
+                    raise QuotaExhausted(quota) from None
                 if status not in self.BUSY_STATUS or wait is None:
                     raise
                 logger.warning("LLM busy (HTTP %s); waiting %ss and retrying", status, wait)

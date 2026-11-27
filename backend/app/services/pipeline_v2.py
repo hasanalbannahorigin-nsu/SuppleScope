@@ -28,7 +28,7 @@ from app.schemas.research.dossier import ResearchDossierV2
 from app.schemas.research.ocr import OcrDocument
 from app.schemas.research.product import IdentityStatus
 from app.services.extraction.grounded import GroundedExtractor, baseline_to_ad_extraction
-from app.services.llm.client import llm_from_settings
+from app.services.llm.client import QuotaExhausted, llm_from_settings
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,11 @@ def extract_ad(doc: OcrDocument, baseline_result) -> tuple[AdExtraction, str | N
             return baseline_to_ad_extraction(doc, baseline_result), "grounded_llm needs LLM_API_KEY; used regex baseline"
         try:
             return GroundedExtractor(llm).run(doc).extraction, None
-        except Exception as exc:  # network / quota / invalid JSON
+        except QuotaExhausted as exc:  # no traceback: the message says what happened and when it resets
+            logger.warning("grounded extraction failed: %s", exc)
+            print(f"   {exc}", flush=True)
+            return baseline_to_ad_extraction(doc, baseline_result), f"grounded_llm failed ({exc}); used regex baseline"
+        except Exception as exc:  # network / busy / invalid JSON
             logger.exception("grounded extraction failed")
             return baseline_to_ad_extraction(doc, baseline_result), f"grounded_llm failed ({exc}); used regex baseline"
     return baseline_to_ad_extraction(doc, baseline_result), None
