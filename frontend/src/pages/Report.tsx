@@ -278,7 +278,7 @@ export function Report() {
                       <ol className="mt-1 list-decimal space-y-1 pl-5 text-xs text-slate-300">
                         {research.evidence_sentences.map((s: any) => (
                           <li key={`${s.evidence_id}-${s.rank}`}>
-                            <span className="text-slate-500">[{s.tag || s.evidence_id}]</span> {s.sentence}
+                            <span className="text-slate-500">[{s.tag || s.evidence_id}{s.role ? ` · ${s.role}` : ""}]</span> {s.sentence}
                           </li>
                         ))}
                       </ol>

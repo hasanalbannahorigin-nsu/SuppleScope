@@ -539,7 +539,7 @@ def test_full_run_with_registry_references_and_caers(tmp_path, monkeypatch):
     ae = d.product.finished_product.adverse_event_reports
     assert ae is not None and ae.total_reports == 1 and ae.top_reactions[0].name == "nausea" and "not proof" in ae.caveat
     assert d.budget.used_lookup_calls >= 2
-    assert d.schema_version == "2.2.0"
+    assert d.schema_version == "2.3.0"
 
 
 def test_reference_phase_survives_lookup_budget(tmp_path):

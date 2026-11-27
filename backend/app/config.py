@@ -99,6 +99,8 @@ class Settings(BaseSettings):
     evidence_selector: str = "auto"
     evidence_embedding_model: str = "pritamdeka/S-PubMedBert-MS-MARCO"
     evidence_reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    # bonus for sentences that report results or conclusions (vs title, background, aim, advice); 0 = off
+    evidence_role_bonus: float = 0.35
 
     # Claim verifier: fine-tuned checkpoints (comma list of local folders), majority vote.
     # Empty = rules only (plus the optional Gemini baseline below).

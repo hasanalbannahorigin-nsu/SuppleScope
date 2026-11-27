@@ -637,7 +637,8 @@ class EvidencePhases:
         query = " ".join(x for x in (claim.text_en or claim.text_original, claim.target_en or "",
                                      *((plan.outcome_terms if plan else []) or []), (plan.question if plan else "") or "") if x)
         docs = [Doc(doc_id=r.evidence_id, source_id=r.source_id,
-                    text=self.s.paper_texts.get(r.source_id) or r.passage, tag=f"{r.scope.value}|{r.study_type.value}")
+                    text=self.s.paper_texts.get(r.source_id) or r.passage, tag=f"{r.scope.value}|{r.study_type.value}",
+                    title=getattr(self.s.sources.get(r.source_id), "title", None) or "")
                 for r in records]
         try:
             picked = self.selector.select(query, docs)
@@ -645,7 +646,7 @@ class EvidencePhases:
             logger.warning("evidence selection failed: %s", exc)
             return []
         return [EvidenceSentence(evidence_id=x.doc_id, source_id=x.source_id, sentence=x.sentence, score=x.score,
-                                 rank=x.rank, retriever=x.retriever, tag=x.tag or None) for x in picked]
+                                 rank=x.rank, retriever=x.retriever, tag=x.tag or None, role=x.role) for x in picked]
 
     def _link(self, claim: AdClaim, kind: str, records: list[EvidenceRecord]) -> P.ClaimLinks | None:
         usage = [u.text for u in self.ad.usage][:3]

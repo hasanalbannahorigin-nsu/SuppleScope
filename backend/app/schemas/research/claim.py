@@ -55,6 +55,8 @@ class EvidenceSentence(Strict):
     rank: int
     retriever: str = Field(description="'bm25', 'bm25+embedding' or 'bm25+embedding+cross-encoder'")
     tag: str | None = Field(None, description="'<scope>|<study type>' of the record, e.g. 'INGREDIENT|RCT'")
+    role: str | None = Field(None, description="Rhetorical role: result, conclusion, methods, background, aim, advice, "
+                                               "title or other (section label of the abstract, else wording cues)")
 
 
 class ClaimResearch(Strict):

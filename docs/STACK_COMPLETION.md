@@ -27,7 +27,7 @@ so the laptop setup keeps working. The heavy extras are in `backend/requirements
 | Product sources | NIH DSLD label records (API), DGDA site queries, Bangladeshi pharmacy queries (Arogga, MedEasy, Osudpotro) | `tools/product_sources.py` | `RESEARCH_PRODUCT_SOURCES=dsld,dgda,pharmacy` |
 | Supplement knowledge | iDISK2.0 CSV (and 1.x RRF) loaded into SQLite; NIH ODS Fact Sheet API; NCCIH Herbs at a Glance | `services/knowledge/`, `research_agent/reference_phase.py`, `scripts/load_idisk.py` | `RESEARCH_REFERENCE_SOURCES=idisk,nccih` (ODS answers 403 to scripts, so it is off by default) |
 | Literature and safety | PubMed study-type filter with fallback; ClinicalTrials.gov registry (context only); openFDA CAERS reports for the product; openFDA drug labels naming an ingredient | `tools/literature.py`, `tools/openfda.py`, `evidence_phase.py` | `RESEARCH_PUBMED_STUDY_FILTER`, `RESEARCH_TRIAL_REGISTRY`, `RESEARCH_OPENFDA` |
-| Evidence selection | Top-5 sentences per claim: BM25 + biomedical bi-encoder (S-PubMedBert-MS-MARCO), cross-encoder re-ranking; BM25 alone without the extras | `services/evidence/selector.py` | `EVIDENCE_SELECTOR`, `EVIDENCE_TOP_K` |
+| Evidence selection | Top-5 sentences per claim: BM25 + biomedical bi-encoder (S-PubMedBert-MS-MARCO), cross-encoder re-ranking, then result/conclusion sentences first (abstract section labels or wording cues) and at most 2 per study; BM25 alone without the extras | `services/evidence/selector.py` | `EVIDENCE_SELECTOR`, `EVIDENCE_TOP_K`, `EVIDENCE_ROLE_BONUS` |
 | Claim verifier | Fine-tuned RoBERTa + PubMedBERT majority vote, then the evidence-type rule (grades A–F, ingredient-only evidence capped at PARTIALLY_SUPPORTED); Gemini zero-shot baseline; rules-only mode | `services/verification/` | `VERIFIER_MODE`, `VERIFIER_MODEL_DIRS` |
 | Model training | Data from SciFact, HealthVer, PUBHEALTH and your own labels; Hugging Face Trainer; free Colab/Kaggle T4 notebook | `backend/verifier_training/` | — |
 | Patient risk | Bangladesh brand → generic table, drug classes, 23 cited rules (NCCIH, NIH ODS, LiverTox), dossier safety findings, RxNorm for unknown names | `services/patient_risk/` | — |
@@ -35,7 +35,7 @@ so the laptop setup keeps working. The heavy extras are in `backend/requirements
 | Deployment | Dockerfiles for back end and web app; Compose with Postgres, back end, nginx front end | `docker-compose.yml`, `backend/Dockerfile`, `frontend/Dockerfile` | `docker compose up -d --build` |
 
 New API endpoints: `POST/GET /api/advertisements/{id}/verify|verification`, `POST/GET /api/advertisements/{id}/patient-risk`.
-The Report page has two new tabs, **Claim Verification** and **Patient Risk**. Dossier schema is now 2.2.0
+The Report page has two new tabs, **Claim Verification** and **Patient Risk**. Dossier schema is now 2.3.0
 (new fields are optional, so older dossiers still load).
 
 ## Rules that keep the results honest

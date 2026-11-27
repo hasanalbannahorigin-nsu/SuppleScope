@@ -11,7 +11,7 @@ from app.schemas.research.common import ResearchStatus
 from app.schemas.research.patient_risk import PatientProfile, RiskLevel
 from app.schemas.research.verifier import VerdictLabel
 from app.services.evaluation.metrics import cohen_kappa, fleiss_kappa, report
-from app.services.evidence.selector import Doc, SentenceSelector, sentences
+from app.services.evidence.selector import Doc, SentenceSelector, labelled_sentences, sentence_role, sentences
 from app.services.patient_risk.engine import assess, normalise_conditions, normalise_medicine, profile_from_context
 from app.services.verification import evidence_grade as G
 from app.services.verification.handoff import build_verifier_inputs
@@ -77,6 +77,58 @@ def test_neural_path_reranks_with_cross_encoder():
     sel = SentenceSelector(mode="auto", top_k=3, encoder=_Enc(), reranker=_Rerank())
     out = sel.select("blood glucose", DOCS)
     assert out[0].sentence.startswith("Mild nausea") and out[0].retriever == "bm25+embedding+cross-encoder"
+
+
+TITLE = ("The efficacy of folk medicines in the management of type 2 diabetes mellitus: results of a randomized "
+         "controlled trial of Syzygium cumini (L.) Skeels.")
+
+
+def test_sentence_roles_from_cues_and_section_labels():
+    cases = {
+        "With the global incidence of diabetes mellitus surpassing 366 million, interest in herbal remedies has surged.": "background",
+        TITLE: "title",
+        "To investigate whether a tea prepared from leaves of jambolan has an antihyperglycaemic effect in diabetes.": "aim",
+        "Given its lower cost, rigorous randomized controlled trials should be conducted with fenugreek in diabetes.": "advice",
+        "Systematic reviews indicate that Ashwagandha effectively restores blood glucose and HbA1c levels.": "conclusion",
+        "No differences were found between the jambolan and placebo groups in fasting glucose.": "result",
+        "Fenugreek reduced fasting blood glucose by 0.96 mmol/L (95% CI 0.5 to 1.4) compared with control.": "result",
+        "Forty-eight patients were randomized to receive jambolan tea or placebo for 28 days.": "methods",
+    }
+    for text, role in cases.items():
+        assert sentence_role(text, None, TITLE) == role, text
+    structured = (TITLE + "\nBACKGROUND: Diabetes is common in adults all over the world.\nRESULTS: Glucose fell more in the tea "
+                  "group than with placebo. Nausea occurred in two people overall.\nCONCLUSIONS: Larger trials are needed "
+                  "before any use in patients.\nTRIAL REGISTRATION: ClinicalTrials.gov NCT01234567 registered.")
+    got = labelled_sentences(structured)
+    assert [sec for _, sec in got] == [None, "background", "result", "result", "conclusion", "other"]
+    assert sentence_role(got[4][0], got[4][1]) == "advice"  # "trials are needed" in the conclusions is advice
+    html = labelled_sentences("<h4>Aim of the study</h4>We aimed to test <i>Trigonella</i> seeds in adults with diabetes.")
+    assert html == [("We aimed to test Trigonella seeds in adults with diabetes.", "aim")]
+
+
+JAMBOLAN = Doc("ev3", "s3", TITLE + "\nTo investigate whether a tea prepared from leaves of jambolan lowers blood glucose in "
+                                  "type 2 diabetes mellitus. Fasting blood glucose in type 2 diabetes did not differ between "
+                                  "jambolan tea and placebo after 28 days (p = 0.6). Rigorous trials of jambolan in type 2 "
+                                  "diabetes should be conducted.", "INGREDIENT|RCT", title=TITLE)
+FENUGREEK = Doc("ev4", "s4", "With the global incidence of diabetes mellitus surpassing 366 million, interest in fenugreek "
+                             "has surged. Fenugreek lowered fasting blood glucose in type 2 diabetes mellitus by 15% versus "
+                             "placebo.", "INGREDIENT|META_ANALYSIS")
+
+
+def test_findings_rank_above_title_background_aim_and_advice():
+    query = "diabetes is cured type 2 diabetes mellitus blood glucose"
+    out = SentenceSelector(mode="bm25", top_k=4).select(query, [JAMBOLAN, FENUGREEK])
+    assert [x.role for x in out[:2]] == ["result", "result"]
+    assert {x.doc_id for x in out[:2]} == {"ev3", "ev4"}  # one finding from each study before the rest
+    assert out[0].sentence.startswith(("Fasting blood glucose", "Fenugreek lowered"))
+    assert all(x.role in ("title", "aim", "advice", "background") for x in out[2:])
+    plain = SentenceSelector(mode="bm25", top_k=4, role_bonus=0.0).select(query, [JAMBOLAN, FENUGREEK])
+    assert [x.role for x in plain[:2]] == ["result", "aim"]  # relevance alone ranks the aim above a finding
+
+
+def test_at_most_two_sentences_per_study_before_others():
+    out = SentenceSelector(mode="bm25", top_k=3).select("type 2 diabetes jambolan glucose", [JAMBOLAN, FENUGREEK])
+    assert [x.doc_id for x in out].count("ev3") <= 2 and "ev4" in {x.doc_id for x in out}
 
 
 def test_dossier_carries_top_sentences(inputs):
