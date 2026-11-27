@@ -61,6 +61,18 @@ RELATION_KIND = [
 ]
 
 
+# iDISK2.0's has_adverse_reaction targets were mined from text and include fragments that are not reactions:
+# severity words ("Severe"), organ words ("Pulmonary") and negations ("No erectile dysfunction").
+NOT_A_REACTION = {"severe", "mild", "moderate", "serious", "acute", "chronic", "pulmonary", "cardiac", "renal",
+                  "hepatic", "gastrointestinal", "systemic", "general", "other", "others", "unknown", "none", "rare",
+                  "common", "high", "low", "increased", "decreased"}
+
+
+def is_reaction(value: str | None) -> bool:
+    v = " ".join((value or "").lower().split())
+    return len(v) > 2 and v not in NOT_A_REACTION and not re.match(r"(no|not|non|without)\b", v)
+
+
 def relation_kind(relation: str, other_type: str | None = None) -> str:
     for pat, kind in RELATION_KIND:
         if pat.search(relation or ""):
@@ -422,6 +434,8 @@ class IdiskStore:
             if kind == "has_ingredient":
                 continue  # product -> ingredient edges are not facts about the ingredient
             value = other_name or other
+            if kind == "adverse_effect" and not is_reaction(value):
+                continue  # e.g. "Severe", "Pulmonary", "No erectile dysfunction"
             extra = ""
             try:
                 a = json.loads(attrs or "{}")

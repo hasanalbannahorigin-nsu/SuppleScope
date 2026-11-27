@@ -314,6 +314,10 @@ def _idisk2_release(tmp_path):
     long_desc = "Fenugreek may have additive hypoglycemic effects with antidiabetic drugs. " * 12
     (rel / "dsi_d.csv").write_text("DSI,Relation,D,Source,Interaction Rating,Source Description\n"
                                    f'DSI000101,interacts_with,D000001,MSKCC,Moderate,"{long_desc}"\n', encoding="utf-8")
+    (ent / "SS.csv").write_text("iDISK_ID,Name,CUI\nSS1,Nausea,\nSS2,Severe,\nSS3,No erectile dysfunction,\n",
+                                encoding="utf-8")
+    (rel / "dsi_ss.csv").write_text("DSI,Relation,SS,Source\n" + "".join(
+        f"DSI000101,has_adverse_reaction,{x},MSKCC\n" for x in ("SS1", "SS2", "SS3")), encoding="utf-8")
     (rel / "dsi_dis.csv").write_text("DSI,Relation,Dis,Source\nDSI000101,is_effective_for,Dis000001,MSKCC\n",
                                      encoding="utf-8")
     rows = "".join(f"DSP{n:06d},has_ingredient,DSI000101\n" for n in range(120))  # more edges than the facts limit
@@ -332,7 +336,7 @@ def test_idisk2_release_layout(tmp_path):
     assert (d.kind, d.start_col, d.rel_col, d.end_col) == ("relations", "DSI", "Relation", "D")  # not "Source"
     assert (maps["dsp_dsi.csv"].start_col, maps["dsp_dsi.csv"].end_col) == ("DSP", "DSI")
     counts = build_database(folder, tmp_path / "idisk.sqlite")
-    assert counts["relations"] == 122
+    assert counts["relations"] == 125
     store = IdiskStore(tmp_path / "idisk.sqlite")
     m = store.match(["fenugreek", "Trigonella foenum-graecum"])
     assert m.entity_id == "DSI000101"  # the ingredient, never the product called "Fenugreek"
@@ -344,6 +348,7 @@ def test_idisk2_release_layout(tmp_path):
     assert inter.value == "Antidiabetic drugs" and "Interaction Rating: Moderate" in inter.text
     assert "additive hypoglycemic effects" in inter.text and len(inter.text) < 800  # long description clipped, kept
     assert any(f.kind == "effective_for" for f in facts)
+    assert [f.value for f in facts if f.kind == "adverse_effect"] == ["Nausea"]  # "Severe", "No ..." dropped
     assert any(f.kind == "attribute" and f.relation == "Safety" for f in facts)
 
 
