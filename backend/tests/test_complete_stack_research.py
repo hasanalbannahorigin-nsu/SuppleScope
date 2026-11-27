@@ -328,6 +328,22 @@ def test_fact_sheet_bullets_are_separate_sentences():
     assert F.safety_sentences(text) == ["Ashwagandha might interact with thyroid hormone medicines and sedatives."]
 
 
+def test_idisk_folder_in_subfolders_lfs_and_zip(tmp_path):
+    from app.services.knowledge import idisk as I
+    sub = tmp_path / "Data" / "nodes"
+    sub.mkdir(parents=True)
+    (sub / "dsi.csv").write_text("id,name\nDSI1,Fenugreek\n", encoding="utf-8")
+    (tmp_path / "Data" / "big.csv").write_text("version https://git-lfs.github.com/spec/v1\noid sha256:ab\nsize 9\n")
+    assert [p.name for p in I.data_files(tmp_path)] == ["dsi.csv"]  # found in a subfolder, LFS placeholder skipped
+    empty = tmp_path / "other"
+    empty.mkdir()
+    (empty / "iDISK2.0.zip").write_bytes(b"PK")
+    (empty / "x.csv").write_text("version https://git-lfs.github.com/spec/v1\n")
+    report = "\n".join(I.folder_report(empty))
+    assert "Expand-Archive" in report and "git lfs pull" in report and "iDISK2.0.zip" in report
+    assert "does not exist" in I.folder_report(tmp_path / "missing")[0]
+
+
 def test_body_parts_are_not_ingredients():
     from app.services.knowledge.normalise import looks_like_body_part, not_an_ingredient
     for name in ("pancreatic beta cell", "Pancreatic beta-cells", "blood sugar level", "insulin sensitivity", "liver"):

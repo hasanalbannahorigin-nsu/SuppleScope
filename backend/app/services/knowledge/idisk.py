@@ -123,9 +123,60 @@ def guess_map(path: Path) -> FileMap:
                    synonym_cols=syn, text_cols=text, headers=headers)
 
 
+LFS_POINTER = b"version https://git-lfs.github.com/spec/"
+
+
+def _is_lfs_pointer(path: Path) -> bool:
+    """A Git LFS placeholder (a few lines of text) instead of the real data file."""
+    try:
+        with path.open("rb") as fh:
+            return fh.read(len(LFS_POINTER)) == LFS_POINTER
+    except OSError:
+        return False
+
+
+def data_files(folder: Path) -> list[Path]:
+    """CSV/TSV files in the folder and its subfolders, without Git LFS placeholders."""
+    files = sorted(folder.rglob("*.csv")) + sorted(folder.rglob("*.tsv"))
+    return [p for p in files if not _is_lfs_pointer(p)]
+
+
+def rrf_folder(folder: Path) -> Path | None:
+    """Folder that holds MRCONSO.RRF (iDISK 1.x), at the top or in a subfolder."""
+    if (folder / "MRCONSO.RRF").exists():
+        return folder
+    hit = next(iter(sorted(folder.rglob("MRCONSO.RRF"))), None)
+    return hit.parent if hit else None
+
+
+def folder_report(folder: Path, limit: int = 25) -> list[str]:
+    """Plain-language lines on why a folder gave no data files, and what to do."""
+    if not folder.exists():
+        return [f"The folder {folder} does not exist. Check the path (the clone may have made another folder name)."]
+    files = [p for p in sorted(folder.rglob("*")) if p.is_file() and ".git" not in p.parts]
+    if not files:
+        return [f"The folder {folder} has no files."]
+    lines = []
+    zips = [p for p in files if p.suffix.lower() in (".zip", ".gz", ".7z", ".rar", ".tar")]
+    pointers = [p for p in files if p.suffix.lower() in (".csv", ".tsv", ".rrf") and _is_lfs_pointer(p)]
+    if zips:
+        lines.append("Compressed files found; unpack them, then run inspect on the unpacked folder:")
+        lines += [f"  Expand-Archive \"{z}\" -DestinationPath \"{z.with_suffix('')}\"" if z.suffix.lower() == ".zip"
+                  else f"  {z} (unpack with 7-Zip)" for z in zips[:10]]
+    if pointers:
+        lines.append(f"{len(pointers)} data file(s) are Git LFS placeholders, not the data. In the iDISK2.0 folder run:")
+        lines += ["  git lfs install", "  git lfs pull"]
+    if not lines:
+        lines.append("No CSV, TSV or RRF data files were found. The data may be published outside the repository "
+                     "(see its README for a download link).")
+    lines.append(f"Files in {folder} (first {min(limit, len(files))} of {len(files)}):")
+    lines += [f"  {p.stat().st_size:>12,d}  {p.relative_to(folder)}" for p in files[:limit]]
+    return lines
+
+
 def discover(folder: Path, overrides: dict | None = None) -> list[FileMap]:
     maps = []
-    for p in sorted(folder.glob("*.csv")) + sorted(folder.glob("*.tsv")):
+    for p in data_files(folder):
         m = guess_map(p)
         for k, v in (overrides or {}).get(p.name, {}).items():
             setattr(m, k, v)
@@ -163,8 +214,9 @@ def build_database(folder: str | Path, db_path: str | Path, overrides: dict | No
     con = sqlite3.connect(db_path)
     con.executescript(SCHEMA)
     counts = {"entities": 0, "names": 0, "relations": 0}
-    if (folder / "MRCONSO.RRF").exists():
-        _load_rrf(con, folder, counts)
+    rrf = rrf_folder(folder)
+    if rrf is not None:
+        _load_rrf(con, rrf, counts)
         con.execute("INSERT INTO meta VALUES ('format', 'iDISK 1.x RRF')")
     else:
         maps = discover(folder, overrides)

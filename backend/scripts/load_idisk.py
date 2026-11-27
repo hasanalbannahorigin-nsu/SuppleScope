@@ -20,7 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.config import get_settings  # noqa: E402
-from app.services.knowledge.idisk import IdiskStore, build_database, discover  # noqa: E402
+from app.services.knowledge.idisk import IdiskStore, build_database, discover, folder_report, rrf_folder  # noqa: E402
 
 
 def main() -> None:
@@ -31,9 +31,17 @@ def main() -> None:
     ap.add_argument("--map", default=None)
     args = ap.parse_args()
     overrides = json.loads(Path(args.map).read_text(encoding="utf-8")) if args.map else None
+    if args.command in ("inspect", "load"):
+        folder = Path(args.target)
+        if not discover(folder, overrides) and rrf_folder(folder) is None:
+            print("No iDISK data files found.")
+            print("\n".join(folder_report(folder)))
+            sys.exit(1)
     if args.command == "inspect":
+        if rrf_folder(Path(args.target)) is not None:
+            print(f"iDISK 1.x RRF files in {rrf_folder(Path(args.target))}")
         for m in discover(Path(args.target), overrides):
-            print(f"\n{Path(m.path).name}: {m.kind}")
+            print(f"\n{Path(m.path).relative_to(Path(args.target))}: {m.kind}")
             print(f"  headers: {m.headers}")
             if m.kind == "entities":
                 print(f"  type={m.entity_type} id={m.id_col} name={m.name_col} synonyms={m.synonym_cols} text={m.text_cols}")
