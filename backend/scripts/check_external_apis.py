@@ -33,8 +33,8 @@ def main() -> None:
     check("openFDA food/event (CAERS)", lambda: openfda.food_event_reports("Centrum").__dict__,
           lambda r: r["total_reports"] > 0)
     check("openFDA drug labels found (search only)", lambda: openfda._get("/drug/label.json", {
-        "search": " OR ".join(f'{sec}:("St. John\'s Wort" OR "St. John\u2019s Wort")' for sec in openfda.LABEL_SECTIONS[:3]),
-        "limit": 1}).get("meta", {}).get("results", {}).get("total", 0), lambda n: n > 0)
+        "search": openfda.label_query(["St. John's Wort"]), "limit": 1}).get("meta", {}).get("results", {}).get("total", 0),
+          lambda n: n > 0)
     check("openFDA drug label mentions", lambda: [(m.drug, m.sentence[:80]) for m in
                                                   openfda.drug_label_mentions(["St. John's Wort"])], bool)
     hits = []
@@ -42,7 +42,7 @@ def main() -> None:
     if hits:
         check("DSLD label", lambda: PS.fetch_any(hits[0].url).text[:300], lambda t: "Supplement Facts" in t)
     sheet: list = []
-    check("NIH ODS fact sheet (Iron)", lambda: sheet.append(F.ods_fact_sheet("Iron")) or
+    check("NIH ODS fact sheet (Iron) [optional, off by default: ODS refuses scripts]", lambda: sheet.append(F.ods_fact_sheet("Iron")) or
           (sheet[0] or F.FactSheet("", "", "", "")).safety_sentences[:2], bool)
     if sheet and sheet[0]:
         print(f"      ODS answered from: {sheet[0].retrieved_from}")

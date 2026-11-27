@@ -3,7 +3,8 @@
 Sources, each optional (RESEARCH_REFERENCE_SOURCES and RESEARCH_OPENFDA):
 - SuppleScope Bangla-Latin dictionary (always): English / scientific name, recorded as a KnowledgeLink.
 - iDISK2.0 (local SQLite): interactions, adverse effects, cautions and indications as one-hop relations.
-- NIH ODS and NCCIH fact sheets: safety sentences, copied word for word.
+- NCCIH fact sheets (and NIH ODS when enabled; ODS refused scripts with 403 in Nov 2026): safety sentences,
+  copied word for word.
 - openFDA drug labels whose interaction / warning sections name the ingredient.
 
 Everything becomes a Finding of class REFERENCE whose passage is the exact database text, plus a

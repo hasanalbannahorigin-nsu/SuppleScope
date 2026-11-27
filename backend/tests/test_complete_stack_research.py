@@ -107,7 +107,29 @@ def test_label_mentions_match_abbreviated_and_curly_names():
     assert by_section["drug_interactions"] == ("Drugs such as rifampin and St. John\u2019s Wort may decrease "
                                                "cyclosporine concentrations.")
     assert by_section["warnings"] == "Avoid st johns-wort products during treatment."
-    assert openfda.query_variants(["St. John's Wort", "Garlic"]) == ["St. John's Wort", "St. John\u2019s Wort", "Garlic"]
+    assert openfda.label_query(["St. John's Wort", "Garlic"], ("drug_interactions", "warnings")) == (
+        'drug_interactions:"St. John\'s Wort" OR drug_interactions:"Garlic" OR warnings:"St. John\'s Wort" OR '
+        'warnings:"Garlic"')
+
+
+def test_label_search_sends_ascii_only_and_retries_simple_query_on_400(monkeypatch):
+    import httpx
+
+    sent = []
+
+    def fake_get(path, params, attempts=3):
+        sent.append(params["search"])
+        if len(sent) == 1:
+            req = httpx.Request("GET", "https://api.fda.gov/drug/label.json")
+            raise httpx.HTTPStatusError("400", request=req, response=httpx.Response(400, request=req))
+        return {"results": [{"set_id": "s", "openfda": {"generic_name": ["WARFARIN"]},
+                             "drug_interactions": ["Garlic may increase bleeding."]}]}
+
+    monkeypatch.setattr(openfda, "_get", fake_get)
+    out = openfda.drug_label_mentions(["Garlic", "রসুন", "Ginkgo"])
+    assert "রসুন" not in sent[0] and sent[0].count(" OR ") == 5
+    assert sent[1] == 'drug_interactions:"Garlic"'
+    assert [m.sentence for m in out] == ["Garlic may increase bleeding."]
 
 
 # ---- web ----------------------------------------------------------------------------------------------------
@@ -296,7 +318,7 @@ def test_ods_falls_back_to_the_html_page_when_the_api_refuses(monkeypatch):
 
     page_html = ("<html><head><title>Iron - Health Professional Fact Sheet</title></head><body><main><p>"
                  + "Iron is a mineral that is naturally present in many foods. " * 12
-                 + "Iron supplements can reduce the absorption of levodopa, a medicine for Parkinson disease."
+                 + "Iron supplements can interact with levodopa, a medicine for Parkinson disease."
                  + "</p></main></body></html>")
     calls = []
 

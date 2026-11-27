@@ -133,25 +133,26 @@ def sentence_around(text: str, start: int, end: int) -> str:
     return text[s:e].strip()
 
 
-def query_variants(names: list[str]) -> list[str]:
-    """Search terms for openFDA: each name, plus a curly-apostrophe spelling when it has an apostrophe (labels
-    often print "John’s", which the search index treats as a different word)."""
-    out: list[str] = []
-    for n in names:
-        for v in (n, n.replace("'", "\u2019")):
-            if v not in out:
-                out.append(v)
-    return out
+def label_query(names: list[str], sections: tuple[str, ...] = LABEL_SECTIONS[:3]) -> str:
+    """Flat openFDA search, one `section:"name"` clause per pair. openFDA answered 400 to a curly apostrophe and
+    to OR inside a field group, so only plain ASCII phrases are sent; spelling differences in the label text are
+    handled afterwards by name_pattern()."""
+    return " OR ".join(f"{sec}:{_quote(n)}" for sec in sections for n in names)
 
 
 def drug_label_mentions(names: list[str], limit: int = 5) -> list[LabelMention]:
     """Drug labels whose interaction / warning sections name the ingredient (any of `names`)."""
-    names = [n for n in dict.fromkeys(n.strip() for n in names if n and len(n.strip()) > 2)][:3]
+    names = [n for n in dict.fromkeys(" ".join(n.replace("\\", " ").split()) for n in names if n)
+             if len(n) > 2 and n.isascii()][:3]
     if not names:
         return []
-    terms = " OR ".join(_quote(n) for n in query_variants(names))
-    search = " OR ".join(f"{sec}:({terms})" for sec in LABEL_SECTIONS[:3])
-    payload = _get("/drug/label.json", {"search": search, "limit": limit})
+    try:
+        payload = _get("/drug/label.json", {"search": label_query(names), "limit": limit})
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code != 400:
+            raise
+        # The simplest query openFDA documents: one phrase in one field.
+        payload = _get("/drug/label.json", {"search": label_query(names[:1], ("drug_interactions",)), "limit": limit})
     return parse_label_mentions(payload, names)
 
 

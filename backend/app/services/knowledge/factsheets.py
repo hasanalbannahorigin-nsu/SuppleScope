@@ -49,7 +49,7 @@ NCCIH_SLUGS = {
     "shilajit": "shilajit", "bacopa": "bacopa", "brahmi": "bacopa", "spirulina": "spirulina",
 }
 SAFETY_WORDS = re.compile(
-    r"interact|medicat|medicine|drug|warfarin|anticoagul|blood thinner|insulin|diabet|blood sugar|pregnan|breast.?feed|"
+    r"interact|medicat|medicines|drug|warfarin|anticoagul|blood thinner|insulin|diabet|blood sugar|pregnan|breast.?feed|"
     r"lactat|liver|hepat|kidney|renal|surgery|bleed|side effect|adverse|toxic|upper limit|\bUL\b|overdose|allerg|"
     r"thyroid|blood pressure|hypotens|immunosuppress|chemotherap|antidepress|sedat|not safe|unsafe|avoid|caution",
     re.I)

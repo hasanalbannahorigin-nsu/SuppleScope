@@ -87,7 +87,7 @@ class Settings(BaseSettings):
     # Product sources tried in phase 1 besides the web search: dsld, dgda, pharmacy (comma list).
     research_product_sources: str = "dsld,dgda,pharmacy"
     # Reference knowledge: iDISK2.0 (local SQLite built by scripts/load_idisk.py), NIH ODS, NCCIH.
-    research_reference_sources: str = "idisk,ods,nccih"
+    research_reference_sources: str = "idisk,nccih"  # add ods where the ODS site answers scripts
     idisk_db_path: str = "./data/knowledge/idisk.sqlite"
     # Bangla-Latin ingredient dictionary (CSV); leave empty for the bundled one.
     ingredient_dictionary_path: str = ""
