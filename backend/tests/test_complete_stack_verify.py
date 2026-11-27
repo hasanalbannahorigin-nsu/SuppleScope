@@ -197,6 +197,21 @@ def test_patient_risk_uses_dossier_findings(dossier):
     assert item.factor == "warfarin" and item.level == RiskLevel.MEDIUM
 
 
+def test_patient_risk_ignores_sentences_that_only_name_the_disease(dossier):
+    # NCCIH pages say "fenugreek is promoted for diabetes"; that is not a caution for a diabetic patient.
+    from app.schemas.research.ingredient import DiseaseCaution
+    ing = dossier.ingredients[0]
+    safety = ing.safety.model_copy(update={"disease_cautions": [
+        DiseaseCaution(condition="diabetes", description="Today, fenugreek seed is promoted as a dietary supplement for "
+                       "diabetes, menstrual cramps, and many other conditions.", finding_ids=[]),
+        DiseaseCaution(condition="pregnancy", description="Fenugreek may be unsafe for use during pregnancy.",
+                       finding_ids=[])]})
+    d2 = dossier.model_copy(update={"ingredients": [ing.model_copy(update={"safety": safety}), *dossier.ingredients[1:]]})
+    found = [i for i in assess(d2, PatientProfile(conditions=["type 2 diabetes", "pregnant"])).items
+             if i.basis == "dossier_finding"]
+    assert [i.factor for i in found] == ["pregnancy"]
+
+
 # ---- metrics --------------------------------------------------------------------------------------------------------
 
 def test_metrics_match_hand_computed_values():

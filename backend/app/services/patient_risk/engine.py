@@ -32,6 +32,7 @@ from app.schemas.research.patient_risk import (
     RiskItem,
     RiskLevel,
 )
+from app.services.knowledge.factsheets import is_safety_statement
 from app.services.knowledge.normalise import default_normaliser
 
 DATA = Path(__file__).resolve().parent / "data"
@@ -241,6 +242,8 @@ def assess(d: ResearchDossierV2, patient: PatientProfile, *, rxnorm=None) -> Pat
         groups = [("drug", x.drug_or_class, x.description, x.finding_ids, x.evidence_ids) for x in r.safety.drug_interactions]
         groups += [("condition", x.condition, x.description, x.finding_ids, x.evidence_ids) for x in r.safety.disease_cautions]
         for kind, target, desc, fids, eids in groups:
+            if kind == "condition" and not is_safety_statement(desc):
+                continue  # e.g. "fenugreek is promoted for diabetes": names the disease, states no concern
             text = _key(f"{target} {desc}")
             for f in factors:
                 if (kind == "drug") != (f.kind == "drug"):

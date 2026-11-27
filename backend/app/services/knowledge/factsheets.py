@@ -53,6 +53,29 @@ SAFETY_WORDS = re.compile(
     r"lactat|liver|hepat|kidney|renal|surgery|bleed|side effect|adverse|toxic|upper limit|\bUL\b|overdose|allerg|"
     r"thyroid|blood pressure|hypotens|immunosuppress|chemotherap|antidepress|sedat|not safe|unsafe|avoid|caution",
     re.I)
+# A sentence with one of these is about safety whatever else it says.
+SAFETY_CUES = re.compile(
+    r"interact|side effect|adverse|toxic|unsafe|not (be )?safe|\bsafe(ty|ly)?\b|avoid|caution|warn|bleed|hypoglyc|"
+    r"too low|blood thinner|anticoagul|liver (damage|injury|problem|toxicity|failure)|hepatotox|"
+    r"kidney (damage|problem|failure)|allerg|overdose|upper limit|\bUL\b|miscarriage|contraindicat|not recommended|"
+    r"should not|shouldn.t|do not (take|use)|don.t (take|use)|stop taking|harmful|dangerous|poison|diarrh|nausea|"
+    r"vomit|upset stomach|headache|drows|sedat|surgery|immunosuppress",
+    re.I)
+# Sentences about use or efficacy name diseases too ("promoted for diabetes"); without a safety cue they are not
+# a caution.
+EFFICACY_WORDS = re.compile(
+    r"enough evidence to (determine|know|say|show|tell)|is promoted (as|for)|(has been|is) (used|in use)|"
+    r"traditionally used|may help|helpful for|effective (for|in)|studies (suggest|show|found)|"
+    r"research (suggests|shows)|benefit",
+    re.I)
+
+
+def is_safety_statement(sentence: str) -> bool:
+    """True for a sentence that states a safety concern, False for one that only mentions a disease while
+    talking about use or evidence of benefit."""
+    if SAFETY_CUES.search(sentence):
+        return True
+    return bool(SAFETY_WORDS.search(sentence)) and not EFFICACY_WORDS.search(sentence)
 
 
 @dataclass
@@ -80,7 +103,7 @@ def _sentences(text: str) -> list[str]:
 def safety_sentences(text: str, limit: int = 15) -> list[str]:
     out = []
     for s in _sentences(text):
-        if SAFETY_WORDS.search(s) and s not in out:
+        if is_safety_statement(s) and s not in out:
             out.append(s)
         if len(out) >= limit:
             break
