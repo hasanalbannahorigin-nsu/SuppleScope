@@ -29,9 +29,9 @@ from app.schemas.research.ad_extraction import (
 )
 from app.schemas.research.ocr import OcrDocument
 from app.services.llm.client import JsonLlm
-from app.services.text.bangla import match_key, normalize, numbers_in, span_score
+from app.services.text.bangla import match_key, missing_words, normalize, numbers_in, span_score
 
-EXTRACTOR_VERSION = "1.0.0"
+EXTRACTOR_VERSION = "1.1.0"  # 1.1: word-level claim and ingredient grounding
 SPAN_THRESHOLD = 85  # evidence vs (cleaned) ad text
 RAW_THRESHOLD = 70  # evidence vs raw OCR, so cleaning cannot invent text
 CONTENT_THRESHOLD = 50  # item text vs its own evidence
@@ -180,6 +180,12 @@ def check_grounding(ex: _Extraction, cleaned: str, raw: str) -> list[_Issue]:
                 issues.append(_Issue(path, f"number {n:g} not in evidence"))
         if own and fuzz.partial_ratio(match_key(own), match_key(ev)) < CONTENT_THRESHOLD:
             issues.append(_Issue(path, "item text does not match its evidence"))
+        if path.startswith(("claims", "ingredients")):
+            # word by word, vowel signs kept: "বিটা সেল উৎপাদন করবে" must not pass for "ইনসুলিন উৎপাদন করবে"
+            if own and (miss := missing_words(own, ev)):
+                issues.append(_Issue(path, f"words not in its evidence: {', '.join(miss)}"))
+            if miss_ev := missing_words(ev, cleaned):
+                issues.append(_Issue(path, f"evidence words not in the ad text: {', '.join(miss_ev)}"))
     return issues
 
 
