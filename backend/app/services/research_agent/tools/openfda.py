@@ -114,8 +114,34 @@ class LabelMention:
     url: str
 
 
-def _sentences(text: str) -> list[str]:
-    return [s.strip() for s in re.split(r"(?<=[.;])\s+(?=[A-Z(])", " ".join(text.split())) if s.strip()]
+BOUNDARY = re.compile(r"[.;]\s+(?=[A-Z(])")
+
+
+def name_pattern(name: str) -> re.Pattern:
+    """Ingredient name as a loose regex: case, punctuation and spacing may differ, so "St. John's Wort" also
+    matches "St John's wort", "St. John’s Wort" (curly apostrophe) and "St.John's-wort"."""
+    words = [w for w in re.split(r"[\W_]+", name) if w]
+    return re.compile(r"\b" + r"[\W_]*".join(re.escape(w) for w in words) + r"\b", re.I)
+
+
+def sentence_around(text: str, start: int, end: int) -> str:
+    """The sentence holding text[start:end]. Boundaries inside the match (the "St." of "St. John's Wort") are
+    ignored, so an abbreviation in the ingredient name does not cut the sentence."""
+    bounds = [m.end() for m in BOUNDARY.finditer(text)]
+    s = max((b for b in bounds if b <= start), default=0)
+    e = min((b for b in bounds if b >= end), default=len(text))
+    return text[s:e].strip()
+
+
+def query_variants(names: list[str]) -> list[str]:
+    """Search terms for openFDA: each name, plus a curly-apostrophe spelling when it has an apostrophe (labels
+    often print "John’s", which the search index treats as a different word)."""
+    out: list[str] = []
+    for n in names:
+        for v in (n, n.replace("'", "\u2019")):
+            if v not in out:
+                out.append(v)
+    return out
 
 
 def drug_label_mentions(names: list[str], limit: int = 5) -> list[LabelMention]:
@@ -123,14 +149,14 @@ def drug_label_mentions(names: list[str], limit: int = 5) -> list[LabelMention]:
     names = [n for n in dict.fromkeys(n.strip() for n in names if n and len(n.strip()) > 2)][:3]
     if not names:
         return []
-    terms = " OR ".join(_quote(n) for n in names)
+    terms = " OR ".join(_quote(n) for n in query_variants(names))
     search = " OR ".join(f"{sec}:({terms})" for sec in LABEL_SECTIONS[:3])
     payload = _get("/drug/label.json", {"search": search, "limit": limit})
     return parse_label_mentions(payload, names)
 
 
 def parse_label_mentions(payload: dict, names: list[str]) -> list[LabelMention]:
-    pats = [re.compile(rf"\b{re.escape(n)}\b", re.I) for n in names]
+    pats = [name_pattern(n) for n in names]
     out: list[LabelMention] = []
     for row in payload.get("results") or []:
         of = row.get("openfda") or {}
@@ -139,10 +165,12 @@ def parse_label_mentions(payload: dict, names: list[str]) -> list[LabelMention]:
         url = f"https://dailymed.nlm.nih.gov/dailymed/lookup.cfm?setid={set_id}" if set_id else f"{BASE}/drug/label.json"
         for sec in LABEL_SECTIONS:
             for block in row.get(sec) or []:
-                for sent in _sentences(str(block)):
-                    if any(p.search(sent) for p in pats):
-                        out.append(LabelMention(drug=drug.lower(), section=sec, sentence=sent[:600], set_id=set_id, url=url))
-                        break
+                text = " ".join(str(block).split())
+                hit = next((m for p in pats for m in [p.search(text)] if m), None)
+                if hit:
+                    out.append(LabelMention(drug=drug.lower(), section=sec, set_id=set_id, url=url,
+                                            sentence=sentence_around(text, hit.start(), hit.end())[:600]))
+                    break
     # one mention per (drug, section)
     seen, unique = set(), []
     for m in out:

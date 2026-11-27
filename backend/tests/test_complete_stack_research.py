@@ -95,6 +95,21 @@ def test_openfda_caers_and_label_parsing():
     assert openfda.reports_from_json(openfda.reports_to_json(rep)) == rep
 
 
+def test_label_mentions_match_abbreviated_and_curly_names():
+    # Real labels print "St. John\u2019s Wort" (curly apostrophe), and "St." must not end the sentence.
+    mentions = openfda.parse_label_mentions({"results": [{
+        "set_id": "x1", "openfda": {"generic_name": ["CYCLOSPORINE"]},
+        "drug_interactions": ["7.1 Inducers. Drugs such as rifampin and St. John\u2019s Wort may decrease "
+                              "cyclosporine concentrations. Monitor levels."],
+        "warnings": ["Avoid st johns-wort products during treatment. Other text."],
+    }]}, ["St. John's Wort"])
+    by_section = {m.section: m.sentence for m in mentions}
+    assert by_section["drug_interactions"] == ("Drugs such as rifampin and St. John\u2019s Wort may decrease "
+                                               "cyclosporine concentrations.")
+    assert by_section["warnings"] == "Avoid st johns-wort products during treatment."
+    assert openfda.query_variants(["St. John's Wort", "Garlic"]) == ["St. John's Wort", "St. John\u2019s Wort", "Garlic"]
+
+
 # ---- web ----------------------------------------------------------------------------------------------------
 
 def test_page_text_keeps_main_content_and_side_tables():
@@ -268,6 +283,43 @@ def test_fact_sheet_safety_sentences_and_xml():
     assert title == "Ashwagandha" and "might interact with thyroid" in body
     assert F.ods_resource("Vitamin D") == "VitaminD" and F.ods_resource("জাম") is None
     assert F.nccih_slug("Licorice") == "licorice-root" and F.nccih_slug("Black seed") == "nigella-sativa"
+
+
+def test_fact_sheet_bullets_are_separate_sentences():
+    text = ("- Withanolides have been associated with anti-inflammatory and antioxidant effects.\n"
+            "- Ashwagandha might interact with thyroid hormone medicines and sedatives.")
+    assert F.safety_sentences(text) == ["Ashwagandha might interact with thyroid hormone medicines and sedatives."]
+
+
+def test_ods_falls_back_to_the_html_page_when_the_api_refuses(monkeypatch):
+    import httpx
+
+    page_html = ("<html><head><title>Iron - Health Professional Fact Sheet</title></head><body><main><p>"
+                 + "Iron is a mineral that is naturally present in many foods. " * 12
+                 + "Iron supplements can reduce the absorption of levodopa, a medicine for Parkinson disease."
+                 + "</p></main></body></html>")
+    calls = []
+
+    def fake_get(url, params=None):
+        calls.append(url)
+        if "api/index.aspx" in url:
+            req = httpx.Request("GET", url)
+            raise httpx.HTTPStatusError("403 Forbidden", request=req, response=httpx.Response(403, request=req))
+        return httpx.Response(200, text=page_html, request=httpx.Request("GET", url))
+
+    monkeypatch.setattr(F, "_get", fake_get)
+    sheet = F.ods_fact_sheet("Iron")
+    assert "readinglevel=Health%20Professional" in calls[0]
+    assert sheet and sheet.retrieved_from == "https://ods.od.nih.gov/factsheets/Iron-HealthProfessional/"
+    assert any("levodopa" in x for x in sheet.safety_sentences)
+
+    def always_forbidden(url, params=None):
+        req = httpx.Request("GET", url)
+        raise httpx.HTTPStatusError("403 Forbidden", request=req, response=httpx.Response(403, request=req))
+
+    monkeypatch.setattr(F, "_get", always_forbidden)
+    with pytest.raises(httpx.HTTPStatusError):
+        F.ods_fact_sheet("Iron")  # the research log records why ODS is missing
 
 
 # ---- reference phase in a full run --------------------------------------------------------------------------------

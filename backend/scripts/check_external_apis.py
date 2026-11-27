@@ -32,13 +32,20 @@ def main() -> None:
     check("ClinicalTrials.gov v2", lambda: [(p.nct_id, p.title) for p in clinicaltrials_search('"fenugreek"', 2)], bool)
     check("openFDA food/event (CAERS)", lambda: openfda.food_event_reports("Centrum").__dict__,
           lambda r: r["total_reports"] > 0)
-    check("openFDA drug label mentions", lambda: [m.drug for m in openfda.drug_label_mentions(["St. John's Wort"])], bool)
+    check("openFDA drug labels found (search only)", lambda: openfda._get("/drug/label.json", {
+        "search": " OR ".join(f'{sec}:("St. John\'s Wort" OR "St. John\u2019s Wort")' for sec in openfda.LABEL_SECTIONS[:3]),
+        "limit": 1}).get("meta", {}).get("results", {}).get("total", 0), lambda n: n > 0)
+    check("openFDA drug label mentions", lambda: [(m.drug, m.sentence[:80]) for m in
+                                                  openfda.drug_label_mentions(["St. John's Wort"])], bool)
     hits = []
     check("DSLD search", lambda: hits.extend(PS.DsldSearch().search("Centrum Silver", 3)) or [h.url for h in hits], bool)
     if hits:
         check("DSLD label", lambda: PS.fetch_any(hits[0].url).text[:300], lambda t: "Supplement Facts" in t)
-    check("NIH ODS fact sheet (Iron)", lambda: (F.ods_fact_sheet("Iron") or F.FactSheet("", "", "", "")).safety_sentences[:2],
-          bool)
+    sheet: list = []
+    check("NIH ODS fact sheet (Iron)", lambda: sheet.append(F.ods_fact_sheet("Iron")) or
+          (sheet[0] or F.FactSheet("", "", "", "")).safety_sentences[:2], bool)
+    if sheet and sheet[0]:
+        print(f"      ODS answered from: {sheet[0].retrieved_from}")
     check("NCCIH (Ashwagandha)", lambda: (F.nccih_fact_sheet("Ashwagandha") or F.FactSheet("", "", "", "")).safety_sentences[:2],
           bool)
     check("RxNorm approximate match", lambda: rxnorm.generic_name("glucophage"), lambda g: bool(g))

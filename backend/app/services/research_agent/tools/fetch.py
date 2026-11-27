@@ -10,6 +10,7 @@ import hashlib
 import io
 import logging
 import re
+import warnings
 from dataclasses import asdict, dataclass
 from html.parser import HTMLParser
 
@@ -66,7 +67,10 @@ def html_to_text(html: str) -> tuple[str, str]:
 def main_text(html: str) -> str:
     """trafilatura main content, or "" when the library is missing or finds nothing."""
     try:
-        import trafilatura
+        with warnings.catch_warnings():
+            # trafilatura pulls in urllib3's optional SOCKS module, which warns when PySocks is absent (harmless)
+            warnings.filterwarnings("ignore", message="SOCKS support in urllib3")
+            import trafilatura
     except ImportError:
         return ""
     try:

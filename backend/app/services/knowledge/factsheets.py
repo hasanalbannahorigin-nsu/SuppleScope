@@ -10,9 +10,11 @@ exist for an ingredient is NOT_FOUND, not an error.
 """
 from __future__ import annotations
 
+import logging
 import re
 import xml.etree.ElementTree as ET
 from dataclasses import asdict, dataclass, field
+from urllib.parse import quote
 
 import httpx
 
@@ -21,6 +23,7 @@ from app.services.research_agent.tools.fetch import html_to_text, page_text
 
 ODS_API = "https://ods.od.nih.gov/api/index.aspx"
 ODS_PAGE = "https://ods.od.nih.gov/factsheets/{resource}-HealthProfessional/"
+logger = logging.getLogger(__name__)
 NCCIH_PAGE = "https://www.nccih.nih.gov/health/{slug}"
 
 # English name (lower case) -> ODS resource name. Names not listed are tried as CamelCase.
@@ -59,11 +62,19 @@ class FactSheet:
     url: str
     text: str
     safety_sentences: list[str] = field(default_factory=list)
+    retrieved_from: str = ""  # the URL that answered (ODS: the API, or the HTML page when the API refuses)
+
+
+BULLET = re.compile(r"^\s*(?:[-\u2022*\u25aa\u25cf]|\d+[.)])\s+")
 
 
 def _sentences(text: str) -> list[str]:
-    flat = " ".join(text.split())
-    return [s.strip() for s in re.split(r"(?<=[.!?])\s+(?=[A-Z])", flat) if 25 <= len(s.strip()) <= 700]
+    """Sentences, line by line: a bullet or a heading is never glued to the next item."""
+    out = []
+    for line in text.splitlines():
+        flat = " ".join(BULLET.sub("", line).split())
+        out.extend(s.strip() for s in re.split(r"(?<=[.!?])\s+(?=[A-Z])", flat) if 25 <= len(s.strip()) <= 700)
+    return out
 
 
 def safety_sentences(text: str, limit: int = 15) -> list[str]:
@@ -112,22 +123,41 @@ def _get(url: str, params: dict | None = None) -> httpx.Response | None:
     return r
 
 
+def ods_api_url(resource: str) -> str:
+    # Spaces as %20, as in the ODS API documentation (httpx would send "Health+Professional").
+    return f"{ODS_API}?resourcename={quote(resource)}&readinglevel=Health%20Professional&outputformat=XML"
+
+
 def ods_fact_sheet(english_name: str) -> FactSheet | None:
+    """The ODS sheet from the XML API; if the API refuses (it has answered 403 to scripts), the same sheet's
+    public HTML page. Both failing raises the last error, so the research log shows why ODS is missing."""
     resource = ods_resource(english_name)
     if not resource:
         return None
-    r = _get(ODS_API, {"resourcename": resource, "readinglevel": "Health Professional", "outputformat": "XML"})
-    if r is None or not r.text.strip():
-        return None
-    try:
-        title, text = _xml_text(r.text)
-    except ET.ParseError:
-        title, text = page_text(r.text)
-    # Unknown resources come back as an error page or an empty document.
-    if len(text) < 500 or re.search(r"not (be )?found|invalid resource", text[:400], re.I):
-        return None
-    return FactSheet(database="NIH ODS", title=title or f"{resource} Fact Sheet for Health Professionals",
-                     url=ODS_PAGE.format(resource=resource), text=text, safety_sentences=safety_sentences(text))
+    page = ODS_PAGE.format(resource=resource)
+    last: Exception | None = None
+    for url in (ods_api_url(resource), page):
+        try:
+            r = _get(url)
+        except httpx.HTTPError as exc:
+            logger.info("NIH ODS %s failed: %s", url, exc)
+            last = exc
+            continue
+        if r is None or not r.text.strip():
+            return None  # 404: no sheet for this ingredient
+        if url == page:
+            title, text = page_text(r.text)
+        else:
+            try:
+                title, text = _xml_text(r.text)
+            except ET.ParseError:
+                title, text = page_text(r.text)
+        # Unknown resources come back as an error page or an empty document.
+        if len(text) < 500 or re.search(r"not (be )?found|invalid resource", text[:400], re.I):
+            return None
+        return FactSheet(database="NIH ODS", title=title or f"{resource} Fact Sheet for Health Professionals",
+                         url=page, text=text, safety_sentences=safety_sentences(text), retrieved_from=str(r.url))
+    raise last  # type: ignore[misc]
 
 
 def nccih_slug(english_name: str) -> str | None:
@@ -149,7 +179,7 @@ def nccih_fact_sheet(english_name: str) -> FactSheet | None:
     if len(text) < 500:
         return None
     return FactSheet(database="NCCIH", title=title or f"{english_name} (NCCIH)", url=str(r.url), text=text,
-                     safety_sentences=safety_sentences(text))
+                     safety_sentences=safety_sentences(text), retrieved_from=str(r.url))
 
 
 def sheet_to_json(f: FactSheet | None) -> dict | None:
