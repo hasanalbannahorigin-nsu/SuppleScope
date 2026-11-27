@@ -133,6 +133,42 @@ def sentence_around(text: str, start: int, end: int) -> str:
     return text[s:e].strip()
 
 
+def label_drug_name(row: dict) -> str:
+    """Drug name of a label record. openFDA leaves the `openfda` block empty for many labels, so fall back to
+    the product line of the label (spl_product_data_elements: "Name generic ACTIVE INGREDIENT ...")."""
+    of = row.get("openfda") or {}
+    names = of.get("generic_name") or of.get("brand_name")
+    if names:
+        return ", ".join(names[:2]).lower()
+    first = ((row.get("spl_product_data_elements") or [""])[0] or "").split()
+    lead = []
+    for w in first[:8]:
+        if w.isupper() and len(w) > 1 and lead:
+            break  # active ingredients are listed in capitals after the product name
+        if w.lower() not in lead:
+            lead.append(w.lower())
+    return " ".join(lead[:4]) or "unnamed drug"
+
+
+def quote_window(text: str, start: int, end: int, size: int = 600) -> str:
+    """The sentence holding the match, or, when the "sentence" is a flattened table with no full stops, an exact
+    stretch of about `size` characters centred on the match (cut at spaces, never in the middle of a word)."""
+    sent = sentence_around(text, start, end)
+    if len(sent) <= size:
+        return sent
+    half = max(0, (size - (end - start)) // 2)
+    a, b = max(0, start - half), min(len(text), end + half)
+    if a > 0 and text[a - 1] != " ":  # started inside a word: move to the next word
+        nxt = text.find(" ", a)
+        if 0 <= nxt < start:
+            a = nxt + 1
+    if b < len(text) and text[b] != " ":  # ended inside a word: move back to the previous space
+        prv = text.rfind(" ", end, b)
+        if prv != -1:
+            b = prv
+    return text[a:b].strip()
+
+
 def label_query(names: list[str], sections: tuple[str, ...] = LABEL_SECTIONS[:3]) -> str:
     """Flat openFDA search, one `section:"name"` clause per pair. openFDA answered 400 to a curly apostrophe and
     to OR inside a field group, so only plain ASCII phrases are sent; spelling differences in the label text are
@@ -161,7 +197,7 @@ def parse_label_mentions(payload: dict, names: list[str]) -> list[LabelMention]:
     out: list[LabelMention] = []
     for row in payload.get("results") or []:
         of = row.get("openfda") or {}
-        drug = ", ".join((of.get("generic_name") or of.get("brand_name") or ["unnamed drug"])[:2])
+        drug = label_drug_name(row)
         set_id = row.get("set_id") or (of.get("spl_set_id") or [None])[0]
         url = f"https://dailymed.nlm.nih.gov/dailymed/lookup.cfm?setid={set_id}" if set_id else f"{BASE}/drug/label.json"
         for sec in LABEL_SECTIONS:
@@ -169,8 +205,8 @@ def parse_label_mentions(payload: dict, names: list[str]) -> list[LabelMention]:
                 text = " ".join(str(block).split())
                 hit = next((m for p in pats for m in [p.search(text)] if m), None)
                 if hit:
-                    out.append(LabelMention(drug=drug.lower(), section=sec, set_id=set_id, url=url,
-                                            sentence=sentence_around(text, hit.start(), hit.end())[:600]))
+                    out.append(LabelMention(drug=drug, section=sec, set_id=set_id, url=url,
+                                            sentence=quote_window(text, hit.start(), hit.end())))
                     break
     # one mention per (drug, section)
     seen, unique = set(), []

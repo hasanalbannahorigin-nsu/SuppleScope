@@ -112,6 +112,21 @@ def test_label_mentions_match_abbreviated_and_curly_names():
         'warnings:"Garlic"')
 
 
+def test_label_without_openfda_block_and_table_text():
+    table = ("Drugs/Dietary Supplements That Decrease Cyclosporine Concentrations Antibiotics nafcillin rifampin "
+             * 12 + "Herbal Preparations St. John's Wort " + "Anticonvulsants carbamazepine oxcarbazepine " * 12)
+    m = openfda.parse_label_mentions({"results": [{
+        "set_id": "t1", "openfda": {},
+        "spl_product_data_elements": ["Cyclosporine Cyclosporine CYCLOSPORINE ALCOHOL CORN OIL"],
+        "drug_interactions": [table]}]}, ["St. John's Wort"])[0]
+    assert m.drug == "cyclosporine"
+    assert "St. John's Wort" in m.sentence and len(m.sentence) <= 600 and m.sentence in table
+    assert not m.sentence.startswith(" ") and m.sentence.split()[0] in table.split()
+    assert openfda.label_drug_name({"spl_product_data_elements": ["Sandimmune cyclosporine CYCLOSPORINE"]}) == \
+        "sandimmune cyclosporine"
+    assert openfda.label_drug_name({}) == "unnamed drug"
+
+
 def test_label_search_sends_ascii_only_and_retries_simple_query_on_400(monkeypatch):
     import httpx
 
