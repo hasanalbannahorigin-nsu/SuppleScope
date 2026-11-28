@@ -29,9 +29,9 @@ from app.schemas.research.ad_extraction import (
 )
 from app.schemas.research.ocr import OcrDocument
 from app.services.llm.client import JsonLlm
-from app.services.text.bangla import letters_key, match_key, missing_words, normalize, numbers_in, span_score
+from app.services.text.bangla import claim_key, letters_key, match_key, missing_words, normalize, numbers_in, span_score
 
-EXTRACTOR_VERSION = "1.3.0"  # 1.1: word-level grounding; 1.2: all claim words required, cleaning cannot add words; 1.3: only the invented words are removed
+EXTRACTOR_VERSION = "1.4.0"  # 1.1: word-level grounding; 1.2: all claim words required, cleaning cannot add words; 1.3: only the invented words are removed; 1.4: quality/approval/guarantee lines and English pack text are claims, repeats merged
 SPAN_THRESHOLD = 85  # evidence vs (cleaned) ad text
 RAW_THRESHOLD = 70  # evidence vs raw OCR, so cleaning cannot invent text
 CONTENT_THRESHOLD = 50  # item text vs its own evidence
@@ -57,7 +57,7 @@ class _Ingredient(BaseModel):
 
 
 class _Claim(BaseModel):
-    text: str = Field(description="One atomic claim in Bangla, one effect on one target")
+    text: str = Field(description="One atomic claim in the ad's own words and language (Bangla or English), one effect on one target")
     text_en: Optional[str] = Field(None, description="English translation of the claim")
     claim_type: ClaimType
     target: Optional[str] = None
@@ -118,20 +118,46 @@ Rules:
 - Claims must be atomic: one effect on one target. "হাড় ও দাঁত মজবুত করে" becomes "হাড় মজবুত করে" and
   "দাঁত মজবুত করে", both with the same evidence. Keep the ad's wording in `text`; give an English
   translation in `text_en` (a translation only, add nothing).
+- A claim is any statement about what the product does or is that a buyer could rely on, not only health
+  effects. These are claims too, never other_text: safety ("পার্শ্বপ্রতিক্রিয়া মুক্ত", "নিরাপদ"), natural or pure
+  ("১০০% ন্যাচারাল", "কেমিক্যাল মুক্ত"), approvals and certificates ("GMP সার্টিফাইড", "বিএসটিআই অনুমোদিত"),
+  guarantees ("১০০% গ্যারান্টি"), speed of results ("শুধু ৭ দিনের মধ্যে ফলাফল"), permanence ("স্থায়ী সমাধান"),
+  tolerability ("সহজে হজমযোগ্য"), and "clinically proven".
+- Claims printed in English (often on the pack, e.g. "Supports heart, brain, eye") are claims as well; keep
+  them in English in `text`.
+- A claim broken over several lines is one claim; its evidence covers those lines.
 - Put time frames, magnitudes and absolutes ("৭ দিনে", "চিরতরে", "১০০%") in `qualifiers` and keep them in `text`.
-- claim_type: CURE (permanent cure), TREATMENT (removes/relieves a condition), PREVENTION, IMPROVEMENT
-  (boosts a normal function), SAFETY ("no side effects"), REPLACEMENT ("no need for medicine/insulin"), OTHER.
+- If the ad repeats the same claim, list it once.
+- claim_type: CURE (permanent cure or solution), TREATMENT (removes/relieves a condition), PREVENTION, IMPROVEMENT
+  (boosts a normal function), SAFETY ("no side effects", "safe", "natural", "chemical-free"), REPLACEMENT
+  ("no need for medicine/insulin"), OTHER (approvals, certificates, guarantees, anything else).
 - Ingredients: only those named in the ad, with amount only if written. `name_en` is the English name
   for searching (translation/transliteration only).
 - Usage: one entry per dosing instruction; numbers for dose_amount and times_per_day; null when not written.
 - Warnings: cautions, contraindications, "consult a doctor", age limits.
-- other_text: other printed text worth keeping (price, order phone, certifications, slogans)."""
+- other_text: other printed text worth keeping that makes no claim about the product (price, offers, order
+  phone, delivery, pack size, slogans such as "হেলদি থাকুন")."""
 
 REPAIR_SYSTEM = EXTRACT_SYSTEM + """
 
 You are repairing an earlier extraction. An automatic checker flagged some items. Return the full
 corrected extraction. For each flagged item either fix its evidence so it is an exact span of the ad
 text (and make the item match that span), or remove the item. Leave unflagged items unchanged."""
+
+
+def merge_repeated_claims(ex: _Extraction) -> _Extraction:
+    """Ads repeat a claim in several places ("শক্তি বাড়ায়" twice). Keep the first, add the others' qualifiers,
+    so the claim is researched and reported once."""
+    kept: dict[tuple[str, bool], _Claim] = {}
+    for c in ex.claims:
+        key = (claim_key(c.text), c.negated)
+        if key not in kept:
+            kept[key] = c.model_copy(update={"qualifiers": list(c.qualifiers)})
+            continue
+        first = kept[key]
+        seen = {letters_key(q) for q in first.qualifiers}
+        first.qualifiers += [q for q in c.qualifiers if letters_key(q) not in seen]
+    return ex.model_copy(update={"claims": list(kept.values())})
 
 
 # ---- grounding check ----------------------------------------------------------------
@@ -305,7 +331,7 @@ class GroundedExtractor:
         for i in issues:
             problems.setdefault(i.path, []).append(i.problem)
         rejected = [RejectedItem(path=p, problems=v, item=_get(ex, p).model_dump(mode="json")) for p, v in problems.items()]
-        final = _drop(ex, set(problems))
+        final = merge_repeated_claims(_drop(ex, set(problems)))
         return ExtractionRun(self._to_schema(doc, final, rejected), cleaned.text, cleaned.edits, rounds)
 
     def _info(self) -> ExtractorInfo:

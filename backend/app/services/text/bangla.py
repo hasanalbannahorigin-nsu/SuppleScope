@@ -82,12 +82,38 @@ def _content_words(text: str) -> list[str]:
     return [w for w in letters_key(text).split() if len(w) >= 2 and w not in FUNCTION_WORDS]
 
 
+# Verb endings, longest first: an atomic claim may restate an imperative or another tense of the ad's verb
+# ("ওজন কমান" -> "ওজন কমায়", "বাড়াবে" -> "বাড়ায়"). Only words that both end in one of these are compared by stem.
+VERB_ENDINGS = tuple(sorted({letters_key(e) for e in "াচ্ছে িয়ে ানো াবে াতে ায় ান াও েছে ছে বে তে ুন েন ে".split()},
+                            key=len, reverse=True))
+
+
+def _verb_stem(word: str) -> str | None:
+    for e in VERB_ENDINGS:
+        if word.endswith(e) and len(_bare(word[: -len(e)])) >= 2:
+            return word[: -len(e)]
+    return None
+
+
+def claim_key(text: str) -> str:
+    """Key for spotting a repeated claim: letters and digits only, the last word by its verb stem
+    ("ওজন বাড়ান!" and "ওজন বাড়ায়" give the same key; "হাড় মজবুত করে" and "দাঁত মজবুত করে" do not)."""
+    words = letters_key(text).split()
+    if words and (st := _verb_stem(words[-1])):
+        words[-1] = st
+    return " ".join(words)
+
+
 def _word_finder(source: str, threshold: float):
-    hay = letters_key(source).replace(" ", "")
+    words = letters_key(source).split()
+    hay = "".join(words)
     bare_hay = _bare(hay)
+    stems = {st for x in words if (st := _verb_stem(x))}
 
     def found(w: str) -> bool:
         if w in hay or fuzz.partial_ratio(w, hay) >= threshold:
+            return True
+        if (st := _verb_stem(w)) and st in stems:  # same verb, other ending
             return True
         # short words differ by one vowel sign after OCR ("দুর" / "দূর"): compare the letters without signs
         return len(w) <= 4 and len(_bare(w)) >= 2 and _bare(w) in bare_hay

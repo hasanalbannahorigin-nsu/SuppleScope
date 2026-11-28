@@ -95,6 +95,6 @@ class AdExtraction(Strict):
     claims: list[AdClaim] = Field(default_factory=list)
     usage: list[AdUsage] = Field(default_factory=list)
     warnings: list[AdField] = Field(default_factory=list)
-    other_text: list[AdField] = Field(default_factory=list, description="Prices, phone/order lines, slogans, certifications as printed")
+    other_text: list[AdField] = Field(default_factory=list, description="Prices, offers, phone/order lines, delivery, pack size, slogans as printed (no claims)")
     unreadable: list[str] = Field(default_factory=list, description="Fragments too garbled to interpret")
     rejected: list[RejectedItem] = Field(default_factory=list, description="Items dropped because their span was not found in the ad text")

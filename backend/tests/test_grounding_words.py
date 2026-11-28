@@ -68,3 +68,13 @@ def test_cleaning_cannot_add_words():
     # a different line count no longer throws the cleaning away: the invented word still goes
     merged = keep_ocr_where_words_invented(_Cleaned(text=normalize("৭ দিনে স্থায়ী সমাধান ডায়াবেটিস")), RAW)
     assert merged.text == normalize("৭ দিনে স্থায়ী সমাধান")
+
+
+def test_other_ending_of_the_ads_verb_is_not_invented():
+    # 7-ad eval 2026-11-28: r04 says "ওজন কমান প্রাকৃতিক উপায়ে!" and the claim restates it as "... ওজন কমায়"
+    ad = normalize("ওজন কমান\nপ্রাকৃতিক উপায়ে!\nরোগ প্রতিরোধ ক্ষমতা বাড়ান")
+    assert missing_words(normalize("প্রাকৃতিক উপায়ে ওজন কমায়"), ad, min_coverage=1.0) == []
+    assert missing_words(normalize("রোগ প্রতিরোধ ক্ষমতা বাড়াবে"), ad, min_coverage=1.0) == []
+    # a new word is still a new word, whatever its ending
+    assert missing_words(normalize("ওজন ও ডায়াবেটিস কমায়"), ad, min_coverage=1.0) == [letters_key("ডায়াবেটিস")]
+    assert missing_words("সমাজ", RAW, min_coverage=1.0) == ["সমাজ"]
