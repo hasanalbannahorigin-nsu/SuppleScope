@@ -416,3 +416,39 @@ def test_verify_and_patient_risk_endpoints(dossier):
     db.commit()
     risk = A.patient_risk(ad.id, user=user, db=db)
     assert risk["overall"] == "MEDIUM" and A.get_patient_risk(ad.id, user=user, db=db)["overall"] == "MEDIUM"
+
+
+def test_roles_of_d_care_evidence_sentences():
+    # D CARE re-test on the laptop, 2026-11-28
+    from app.services.evidence.selector import sentence_role
+
+    cases = {
+        "There were no differences in age, sex, or glycated hemoglobin (HbA1c) levels between the bitter melon extract "
+        "and placebo groups.": "methods",
+        "The Azadirachta indica (neem) is an evergreen tree belonging to the family of Meliaceae.": "background",
+        "A related species Tinospora cordifolia is used in Ayurveda for treating a large spectrum of diseases.": "background",
+        "While, Tinospora cordifolia is widely recognized as a significant herb in the Indian System of Medicines (ISM) due "
+        "to its bioactive components and has been used in the treatment of diabetes, cancer, fever and many more.": "background",
+        "Our present study in this review encompasses 1.) Phytochemistry, traditional uses and pharmacological potential "
+        "of T. cordifolia as well as other Indian Tinospora species.": "aim",
+        "In this paper, an attempt has been made to review the effects of various extracts from Gymnema sylvestre in the "
+        "regulation of carbohydrate and lipid metabolism in both animal and clinical studies.": "aim",
+        "Relevant clinical trials are necessary to validate the mentioned effects, safety, and optimum dose of this herbal "
+        "medicine.": "advice",
+        # findings stay findings
+        "Our meta-analysis of 10 studies with 419 participants showed that GS supplementation significantly reduces fasting "
+        "blood glucose (SMD 1.57 mg/dl, 95% CI 2.22 to -0.93, p < .0001) compared to baseline.": "result",
+        "Fasting blood glucose levels decreased significantly with glyburide and did not change with S. cumini tea or "
+        "placebo.": "result",
+        "No significant differences in HbA1c were found between the extract and placebo groups after 12 weeks.": "result",
+    }
+    assert {s: sentence_role(s) for s in cases} == cases
+    assert sentence_role(next(iter(cases)), section="result") == "methods"  # also under a RESULTS label
+
+
+def test_reason_says_when_models_choose_another_allowed_label(inputs):
+    out = EnsembleVerifier([_Model("a", I), _Model("b", I)]).verify([inputs["c01"]])[0]
+    assert out.label == I  # allowed for grade B evidence, so the models' label stands
+    assert "The rules alone would say PARTIALLY_SUPPORTED" in out.rationale
+    same = EnsembleVerifier([_Model("a", P)]).verify([inputs["c01"]])[0]
+    assert "rules alone" not in same.rationale

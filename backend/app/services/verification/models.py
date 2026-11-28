@@ -145,6 +145,8 @@ class EnsembleVerifier:
                                  f"{probs.get(label, 0):.2f}); the evidence rule overrules that.")
                 else:
                     rationale = d.rationale if d.final else rationale + " " + d.rationale
+                if not d.final and final == label and label != d.label:  # the models' allowed choice differs
+                    rationale += f" The rules alone would say {d.label.value}; the models' label is allowed for this evidence."
                 rationale += f" ({note})" if note else ""
                 if abstained:  # no verdict, so no confidence (the models' probabilities stay in label_probabilities)
                     confidence = None

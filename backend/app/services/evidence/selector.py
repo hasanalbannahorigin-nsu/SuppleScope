@@ -73,12 +73,14 @@ _STRONG_RESULT = re.compile(
 _ADVICE = re.compile(
     r"\bshould be (?:conducted|performed|undertaken|carried out|explored|investigated|confirmed|evaluated)"
     r"|\b(?:further|more|future|larger|additional) (?:[\w-]+ ){0,2}(?:research|studies|trials|investigations?)\b"
-    r"|\b(?:are|is|remain) (?:still )?(?:needed|warranted|required)\b", re.I)
+    r"|\b(?:are|is|remain) (?:still )?(?:needed|warranted|required|necessary)\b", re.I)
 _AIM = re.compile(
     r"^(?:to (?:investigate|evaluate|assess|determine|examine|compare|explore|test|review|summari[sz]e)\b"
     r"|(?:this|the present|the current|our) (?:[\w-]+ ){0,4}?(?:study|review|trial|meta-analysis|analysis|work|paper) "
     r"(?:aim(?:s|ed)?|was designed|is designed|sought|evaluat(?:ed|es)|assess(?:ed|es)|investigat(?:ed|es)|examin(?:ed|es)"
-    r"|explor(?:ed|es)|summari[sz](?:ed|es)|compar(?:ed|es))\b|(?:we|the authors) (?:aim(?:ed)?|sought|set out)\b"
+    r"|explor(?:ed|es)|summari[sz](?:ed|es)|compar(?:ed|es)|encompass(?:es|ed)?|cover(?:s|ed)|discuss(?:es|ed)"
+    r"|describ(?:es|ed)|highlight(?:s|ed))\b|(?:we|the authors) (?:aim(?:ed)?|sought|set out)\b"
+    r"|in this (?:paper|review|article|study),? (?:an attempt (?:has been|was) made|we (?:review|summari[sz]e|discuss|describe))"
     r"|the (?:aim|objective|purpose|goal)s? (?:of|was|is)\b)", re.I)
 _CONCLUSION = re.compile(
     r"\bin conclusion\b|\bwe conclude\b|\b(?:these|our|the) (?:results|findings|data) (?:suggest|indicate|show|demonstrate|support|confirm)"
@@ -92,12 +94,22 @@ _BACKGROUND = re.compile(
     r"|\binterest in\b|\b(?:is|are|has been|have been) (?:widely|commonly|traditionally|frequently|extensively) used\b"
     r"|\btraditional(?:ly)? (?:chinese |ayurvedic |folk |herbal )?(?:medicines?|use|used|remed(?:y|ies))\b|\blittle is known\b|\bremains? (?:unclear|unknown|controversial)\b"
     r"|\bsince ancient times\b|\bfor (?:centuries|thousands of years)\b|\b(?:has|have) been in use\b|\balso known as\b"
-    r"|\b(?:increasing|growing) (?:amount|number|body) of\b", re.I)
+    r"|\b(?:increasing|growing) (?:amount|number|body) of\b"
+    r"|\bbelong(?:s|ing)? to the (?:family|genus|order)\b|\bis an? (?:evergreen|perennial|deciduous|annual|climbing|"
+    r"medicinal|tropical) (?:tree|shrub|herb|plant|climber|vine|creeper)\b"
+    r"|\b(?:is|are) widely (?:recogni[sz]ed|known|distributed|cultivated|grown)\b"
+    r"|\bused in (?:ayurveda|ayurvedic|unani|siddha|folk|traditional)\b"
+    r"|\b(?:has|have) been used (?:for|in) (?:the )?(?:treatment|management) of\b", re.I)
 _METHODS = re.compile(
     r"\bwere randomi[sz]ed\b|\brandomly (?:assigned|allocated)\b|\bwere (?:enrolled|recruited|included|allocated|assigned|divided)\b"
     r"|\b(?:we|were) searched\b|\bdatabases? (?:were|was) searched\b|\bdata were (?:extracted|analy[sz]ed|pooled)\b"
     r"|\b(?:literature|systematic|electronic|database) search(?:es)? (?:was|were) (?:carried out|conducted|performed|done)\b"
     r"|\bparticipants (?:received|took|were given)\b|\b(?:was|were) measured\b", re.I)
+_BASELINE = re.compile(
+    r"\bno (?:statistically )?(?:significant )?differences? (?:were (?:found|observed|seen) )?(?:in|between|regarding|with "
+    r"respect to) (?:the )?(?:groups? (?:in|regarding) )?(?:age|sex|gender|race|ethnicity|bmi|body mass index|baseline|demographic)"
+    r"|\bbaseline (?:characteristics|demographics|data|values)\b|\b(?:comparable|similar|balanced|did not differ) at baseline\b",
+    re.I)
 _WEAK_RESULT = re.compile(
     r"\b(?:reduc(?:ed|tion)|decreas(?:ed|e)|lowered|improv(?:ed|ement)|increased|normali[sz]ed|restor(?:ed|es)|attenuat(?:ed|es)"
     r"|compared (?:with|to)|versus|than (?:placebo|control)|occurred|(?:was|were) observed|experienced"
@@ -173,6 +185,8 @@ def sentence_role(sentence: str, section: str | None = None, title: str = "") ->
     n = _norm(sentence)
     if title and n and n in _norm(title):
         return "title"
+    if _BASELINE.search(sentence):  # "no differences in age, sex or HbA1c between groups" describes the groups
+        return "methods"
     strong = bool(_STRONG_RESULT.search(sentence))
     if section in ("result", "conclusion"):
         # review abstracts put background lines under RESULTS too ("X has been used since ancient times")

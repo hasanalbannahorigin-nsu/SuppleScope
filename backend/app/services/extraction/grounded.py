@@ -29,9 +29,9 @@ from app.schemas.research.ad_extraction import (
 )
 from app.schemas.research.ocr import OcrDocument
 from app.services.llm.client import JsonLlm
-from app.services.text.bangla import match_key, missing_words, normalize, numbers_in, span_score
+from app.services.text.bangla import letters_key, match_key, missing_words, normalize, numbers_in, span_score
 
-EXTRACTOR_VERSION = "1.2.0"  # 1.1: word-level grounding; 1.2: all claim words required, cleaning cannot add words
+EXTRACTOR_VERSION = "1.3.0"  # 1.1: word-level grounding; 1.2: all claim words required, cleaning cannot add words; 1.3: only the invented words are removed
 SPAN_THRESHOLD = 85  # evidence vs (cleaned) ad text
 RAW_THRESHOLD = 70  # evidence vs raw OCR, so cleaning cannot invent text
 CONTENT_THRESHOLD = 50  # item text vs its own evidence
@@ -236,20 +236,33 @@ def _locate(evidence: str, doc: OcrDocument) -> TextSpan:
     )
 
 
+def _drop_words(line: str, words: set[str]) -> str:
+    """The line without the tokens whose letters are one of `words` (letters_key forms)."""
+    kept = [t for t in line.split(" ") if not (set(letters_key(t).split()) & words)]
+    return " ".join(t for t in kept if t)
+
+
 def keep_ocr_where_words_invented(cleaned: _Cleaned, raw: str) -> _Cleaned:
-    """Cleaning may fix characters, not add words. A cleaned line with a word that has no match in the raw OCR
-    (e.g. garbage "মাজে" turned into "সমাজ", or an added "ডায়াবেটিস") goes back to its raw OCR line; if the
-    line count changed, the whole cleaning is dropped."""
-    raw_lines, lines = raw.split("\n"), cleaned.text.split("\n")
+    """Cleaning may fix characters, not add words. A word of the cleaned text with no match in the raw OCR
+    (an added "ডায়াবেটিস", or garbage "মাজে" turned into "সমাজ") is removed, so the line keeps its genuine
+    spelling fixes; a line that still fails goes back to its raw OCR line, or the whole cleaning is dropped
+    when the line count changed."""
+    lines = cleaned.text.split("\n")
     bad = {i: w for i, line in enumerate(lines) if (w := missing_words(line, raw, min_coverage=1.0))}
     if not bad:
         return cleaned
-    if len(lines) != len(raw_lines):
-        return _Cleaned(text=raw, edits=["[cleaning discarded: added words not in the OCR text: "
-                                         + ", ".join(w for ws in bad.values() for w in ws) + "]"])
     for i, words in bad.items():
-        lines[i] = raw_lines[i]
-    notes = [f"[line {i + 1} kept as OCR: '{', '.join(ws)}' not in the OCR text]" for i, ws in bad.items()]
+        lines[i] = _drop_words(lines[i], set(words))
+    notes = [f"[line {i + 1}: removed '{', '.join(ws)}', not in the OCR text]" for i, ws in bad.items()]
+    still = {i for i in bad if missing_words(lines[i], raw, min_coverage=1.0)}
+    if still:
+        raw_lines = raw.split("\n")
+        if len(lines) != len(raw_lines):
+            return _Cleaned(text=raw, edits=["[cleaning discarded: added words not in the OCR text: "
+                                             + ", ".join(w for ws in bad.values() for w in ws) + "]"])
+        for i in still:
+            lines[i] = raw_lines[i]
+        notes += [f"[line {i + 1} kept as OCR]" for i in sorted(still)]
     return _Cleaned(text="\n".join(lines), edits=cleaned.edits + notes)
 
 

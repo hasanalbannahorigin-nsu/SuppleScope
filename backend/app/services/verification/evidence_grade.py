@@ -115,7 +115,8 @@ def decide(vi: VerifierInput, p: EvidenceProfile | None = None) -> RuleDecision:
         allowed.insert(0, VerdictLabel.SUPPORTED)
     # rule label (also the fallback when no model is configured)
     if p.contradicts > p.supports:
-        label, why = VerdictLabel.CONTRADICTED, "human studies that measured the claimed effect mostly found no benefit or harm"
+        label, why = (VerdictLabel.CONTRADICTED, "human studies that measured the claimed effect mostly contradict the claim "
+                      "(no benefit, harm, or side effects reported)")
     elif p.supports > 0 and p.product_support_same and p.contradicts == 0:
         label, why = VerdictLabel.SUPPORTED, "a human study of this product measured and supports the claimed effect"
     elif p.supports > 0:

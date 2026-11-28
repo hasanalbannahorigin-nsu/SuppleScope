@@ -50,17 +50,21 @@ def test_added_target_word_is_flagged():
 
 
 def test_cleaning_cannot_add_words():
-    raw_lines = RAW.split("\n")
     cleaned = _Cleaned(text="\n".join([
         "৭ দিনে স্থায়ী সমাধান ডায়াবেটিস & ইনসুলিন উৎপাদন করবে & দীর্ঘমেয়াদি রোগ দূর করবে",  # adds ডায়াবেটিস
         "D CARE & সুগার নিয়ন্ত্রণ করবে & রোগ প্রতিরোধ ক্ষমতা বাড়াবে CARE শতভাগ কার্যকরী",  # real fixes only
         "DIA CONTROL ও পার্শ্বপ্রতিক্রিয়ামুক্ত সমাজ",  # garbage "মাজে" made into "সমাজ"
     ]), edits=["নিয়স্ত্রণকরবে -> নিয়ন্ত্রণ করবে"])
+    cleaned.text = normalize(cleaned.text)  # as GroundedExtractor._clean does
     out = keep_ocr_where_words_invented(cleaned, RAW)
     lines = out.text.split("\n")
-    assert lines[0] == raw_lines[0] and lines[2] == raw_lines[2]
-    assert lines[1].startswith("D CARE & সুগার নিয়ন্ত্রণ করবে")  # the genuine fix is kept
+    # only the invented words go; the spelling fixes on the same lines stay (laptop 2026-11-28: reverting the
+    # whole line left claims like "স্থ্য়ীসমাধান" and "নিয়স্ত্রণকরবে")
+    assert lines[0] == normalize("৭ দিনে স্থায়ী সমাধান & ইনসুলিন উৎপাদন করবে & দীর্ঘমেয়াদি রোগ দূর করবে")
+    assert lines[1].startswith(normalize("D CARE & সুগার নিয়ন্ত্রণ করবে"))
+    assert lines[2] == normalize("DIA CONTROL ও পার্শ্বপ্রতিক্রিয়ামুক্ত")
     assert any(letters_key("ডায়াবেটিস") in e for e in out.edits) and any(letters_key("সমাজ") in e for e in out.edits)
-    # a different line count: the whole cleaning is dropped
-    merged = _Cleaned(text="৭ দিনে স্থায়ী সমাধান ডায়াবেটিস")
-    assert keep_ocr_where_words_invented(merged, RAW).text == RAW
+    assert all(not missing_words(line, RAW, min_coverage=1.0) for line in lines)
+    # a different line count no longer throws the cleaning away: the invented word still goes
+    merged = keep_ocr_where_words_invented(_Cleaned(text=normalize("৭ দিনে স্থায়ী সমাধান ডায়াবেটিস")), RAW)
+    assert merged.text == normalize("৭ দিনে স্থায়ী সমাধান")
